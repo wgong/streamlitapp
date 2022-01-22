@@ -1,7 +1,11 @@
 """
-Streamlit Concept Demo
+Streamlit Concept and Hello Demo
+based on 
+1) https://docs.streamlit.io/library/get-started/main-concepts
+2) 
 
-https://github.com/wgong/streamlitapp/blob/main/demos/demo_concept.py
+The source code: 
+    https://github.com/wgong/streamlitapp/blob/main/demos/demo_concept.py
 
 """
 
@@ -22,7 +26,52 @@ import streamlit as st
 import pydeck as pdk
 from urllib.error import URLError
 
+
+st_tutorials_data = {
+    "shail_deliwala" : {
+        "title" : "Streamlit 101",
+        "blog"  : {
+            "url" : "https://towardsdatascience.com/streamlit-101-an-in-depth-introduction-fc8aad9492f2",
+            "desc" : "Streamlit 101: An in-depth introduction - Airbnb NYC data"
+        }
+    },
+    "data_professor" : {
+        "title" : "Streamlit Web App in Python by Data Professor",
+        "vid" : {
+            "url" : "https://www.youtube.com/watch?v=ZZ4B0QUHuNc&list=PLtqF5YXg7GLmCvTswG32NqQypOuYkPRUE",
+            "desc" : "How to Build Your First Data Science Web App in Python - Streamlit Tutorial"
+        },
+        "src" : {
+            "url" : "https://github.com/dataprofessor/code.git",
+            "desc" :"github/dataprofessor/code"
+        }
+    },
+    "jcharis" : {
+        "title" : "Streamlit Python Tutorials Crash Course",
+        "vid" : {
+            "url" : "https://www.youtube.com/watch?v=6acv9LL6gHg&list=PLJ39kWiJXSixyRMcn3lrbv8xI8ZZoYNZU&index=2",
+            "desc" :"Building a NLP App with Streamlit,Spacy and Python"
+        },
+        "src" : {
+            "url" : "https://github.com/Jcharis/DataScienceTools.git",
+            "desc" :"github/JCharis/DataScienceTools"
+        }
+    },
+    "part_time_larry" : {
+        "title" : "Streamlit Tutorials by Part Time Larry",
+        "vid" : {
+            "url" : "https://www.youtube.com/watch?v=0ESc1bh3eIg",
+            "desc" :"Streamlit - Building Financial Dashboards with Python"
+        },
+        "src" : {
+            "url" : "https://github.com/hackingthemarkets/streamlit-dashboards.git",
+            "desc" :"github/hackingthemarkets/streamlit-dashboards"
+        }
+    }
+}
+
 # Initial page config
+
 
 st.set_page_config(
      page_title='Streamlit Concept Demo',
@@ -348,18 +397,25 @@ def demo_learn():
 
     st.header("Learn Streamlit")
 
-    st.subheader("Tutorials")
-    st.markdown("[Streamlit 101: An in-depth introduction](https://towardsdatascience.com/streamlit-101-an-in-depth-introduction-fc8aad9492f2)")
-    
-
-    st.subheader("Streamlit Web App in Python by Data Professor")
-    st.video("https://www.youtube.com/watch?v=ZZ4B0QUHuNc&list=PLtqF5YXg7GLmCvTswG32NqQypOuYkPRUE")
-
-    st.subheader("Streamlit - Building Financial Dashboards with Python by Part Time Larry")
-    st.video("https://www.youtube.com/watch?v=0ESc1bh3eIg")
-
-    st.subheader("Streamlit Python Tutorials Crash Course")
-    st.video("https://www.youtube.com/watch?v=6acv9LL6gHg&list=PLJ39kWiJXSixyRMcn3lrbv8xI8ZZoYNZU&index=2")
+    for k in st_tutorials_data.keys():
+        st.subheader(st_tutorials_data[k]["title"])
+        st_data = st_tutorials_data[k]
+        if "vid" in st_data:
+            # display video
+            st.video(st_data["vid"]["url"])
+            st.markdown(f"""
+            - [{st_data["vid"]["desc"]}]({st_data["vid"]["url"]})
+            """)
+        if "src" in st_data:
+            # display src
+            st.markdown(f"""
+            - [{st_data["src"]["desc"]}]({st_data["src"]["url"]})
+            """)
+        if "blog" in st_data:
+            # display blog
+            st.markdown(f"""
+            - [{st_data["blog"]["desc"]}]({st_data["blog"]["url"]})
+            """)
     
     if st.checkbox('Show code ...'):
         st.code(inspect.getsource(demo_learn))
