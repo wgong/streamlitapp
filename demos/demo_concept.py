@@ -300,8 +300,8 @@ def demo_sidebar():
     global menu_item
 
     st.sidebar.markdown('''
-    [<img src='data:image/png;base64,{}' class='img-fluid' width=32 height=32>](https://streamlit.io/)
-    '''.format(img_to_bytes("streamlit_logo.png")), unsafe_allow_html=True)
+    [<img src='https://streamlit.io/images/brand/streamlit-mark-color.svg' class='img-fluid' width=32 height=32>](https://streamlit.io/)
+    ''', unsafe_allow_html=True)
 
     st.sidebar.markdown("""
     <span style="color:red">__Streamlit__ </span>: Why-What-How
