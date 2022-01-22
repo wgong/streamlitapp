@@ -290,6 +290,24 @@ def demo_cache():
     - sub-function within recursive calls are also cached
     """)
 
+def demo_learn():
+
+    st.header("Learn Streamlit")
+
+    st.subheader("Tutorials")
+    st.markdown("[Streamlit 101: An in-depth introduction](https://towardsdatascience.com/streamlit-101-an-in-depth-introduction-fc8aad9492f2)")
+    
+
+    st.subheader("Streamlit Web App in Python by Data Professor")
+    st.video("https://www.youtube.com/watch?v=ZZ4B0QUHuNc&list=PLtqF5YXg7GLmCvTswG32NqQypOuYkPRUE")
+
+    st.subheader("Streamlit - Building Financial Dashboards with Python by Part Time Larry")
+    st.video("https://www.youtube.com/watch?v=0ESc1bh3eIg")
+
+    st.subheader("Streamlit Python Tutorials Crash Course")
+    st.video("https://www.youtube.com/watch?v=6acv9LL6gHg&list=PLJ39kWiJXSixyRMcn3lrbv8xI8ZZoYNZU&index=2")
+    
+
 def demo_misc():
 
     st.header('Misc')
@@ -307,7 +325,7 @@ def demo_sidebar():
     <span style="color:red">__Streamlit__ </span>: Why-What-How
     """, unsafe_allow_html=True)
     st.sidebar.video("https://www.youtube.com/watch?v=R2nr1uZ8ffc")
-    menu_options = ("Data", "Chart", "Media", "Widget", "Layout", "Theme", "Cache", "Misc")
+    menu_options = ("Data", "Chart", "Media", "Widget", "Layout", "Theme", "Cache", "Learn", "Misc")
     default_ix = menu_options.index("Chart")
     st.sidebar.markdown("[Concepts](https://docs.streamlit.io/library/get-started/main-concepts)")
     menu_item = st.sidebar.selectbox("Explore: ", menu_options, index=default_ix)
@@ -356,6 +374,10 @@ def demo_body():
         demo_theme()
         if st.checkbox('Show code ...'):
             st.code(inspect.getsource(demo_theme))
+    elif menu_item == "Learn":
+        demo_learn()
+        if st.checkbox('Show code ...'):
+            st.code(inspect.getsource(demo_learn))
     elif menu_item == "Misc":
         demo_misc()
         if st.checkbox('Show code ...'):
@@ -364,6 +386,7 @@ def demo_body():
         demo_cache()  # default
         if st.checkbox('Show code ...'):
             st.code(inspect.getsource(demo_cache))
+
 
 
 def main():
