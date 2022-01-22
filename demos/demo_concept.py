@@ -6,7 +6,7 @@ import inspect
 
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import altair as alt
 import plotly.figure_factory as ff
 # from bokeh.plotting import figure
@@ -83,11 +83,11 @@ def demo_chart():
     st.subheader('st.bar_chart')  # not easy for unstack bar
     st.bar_chart(df)   
 
-    st.subheader('st.pyplot') 
-    arr = np.random.normal(1, 1, size=100)
-    fig, ax = plt.subplots()
-    ax.hist(arr, bins=20)
-    st.pyplot(fig)
+    # st.subheader('st.pyplot') 
+    # arr = np.random.normal(1, 1, size=100)
+    # fig, ax = plt.subplots()
+    # ax.hist(arr, bins=20)
+    # st.pyplot(fig)
 
     st.subheader('st.altair_chart') 
     c = alt.Chart(df).mark_circle().encode(
