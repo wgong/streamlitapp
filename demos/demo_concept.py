@@ -266,6 +266,7 @@ def do_media():
     st.header('Video ')
     st.video("https://www.youtube.com/watch?v=rOjHhS5MtvA")
     st.video("https://www.youtube.com/watch?v=q2KBWmiL71o")
+    st.video("https://www.youtube.com/watch?v=_T8LGqJtuGc")
 
     st.header('Audio ')
     st.subheader("classical music from [http://www.lisztonian.com/](http://www.lisztonian.com/titles/index.php?s=title)")
@@ -274,6 +275,21 @@ def do_media():
 
     st.subheader("clips from [SoundHelix](https://www.soundhelix.com/audio-examples)")
     st.audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
+
+    st.subheader("Internet radio")
+    st.markdown("""
+    - [AccuRadio](https://www.accuradio.com/) is a good source, but don't know how to get the URL
+    for st.audio() call. 
+    """)
+
+    st.markdown("""
+    - [mutiny-studio](http://nthmost.net:8000/mutiny-studio)
+    """)
+    st.audio("http://nthmost.net:8000/mutiny-studio")
+    st.markdown("""
+    - [440hz-radio](https://stream.440hz-radio.de/440hz-main.mp3?start=1597517799)
+    """)
+    st.audio("https://stream.440hz-radio.de/440hz-main.mp3?start=1597517799")
 
     if st.checkbox('Show code ...', key="do_media"):
         st.code(inspect.getsource(do_media))
