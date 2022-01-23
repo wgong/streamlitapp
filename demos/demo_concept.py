@@ -5,29 +5,36 @@ based on
 2) 
 
 The source code: 
-    https://github.com/wgong/streamlitapp/blob/main/demos/demo_concept.py
+    https://github.com/wgong/streamlitapp/blob/main/demos/do_concept.py
 
 """
+
+import streamlit as st
 
 import os
 import time
 from pathlib import Path
 import base64
 import inspect
+from urllib.error import URLError
 
 import pandas as pd
 import numpy as np
-# import matplotlib.pyplot as plt
 import altair as alt
+# import matplotlib.pyplot as plt
 # import plotly.figure_factory as ff
 # from bokeh.plotting import figure
-
-import streamlit as st
 import pydeck as pdk
-from urllib.error import URLError
 
+# Initial page config
+st.set_page_config(
+     page_title='Streamlit Concept Demo',
+     layout="wide",
+     initial_sidebar_state="expanded",
+)
 
-st_tutorials_data = {
+# app-data
+data_st_tutorials = {
     "shail_deliwala" : {
         "title" : "Streamlit 101",
         "blog"  : {
@@ -70,14 +77,7 @@ st_tutorials_data = {
     }
 }
 
-# Initial page config
-
-
-st.set_page_config(
-     page_title='Streamlit Concept Demo',
-     layout="wide",
-     initial_sidebar_state="expanded",
-)
+# cache functions for performance
 
 @st.cache
 def get_UN_data():
@@ -99,7 +99,7 @@ def img_to_bytes(img_path):
     return encoded
 
 @st.cache # 👈 below function will be cached
-def Fibonacci(n):
+def fibonacci(n):
     # Function for nth Fibonacci number
 
     # Check if input is 0 then it will
@@ -118,11 +118,12 @@ def Fibonacci(n):
     elif n == 1 or n == 2:
         return 1
     else:
-        return Fibonacci(n-1) + Fibonacci(n-2)
+        return fibonacci(n-1) + fibonacci(n-2)
 
+# define event handlers 
+# prefix "do_" functions
 
-
-def demo_data():
+def do_data():
 
     ## Display Data
     st.header('Data')
@@ -140,7 +141,7 @@ def demo_data():
     df # same as : st.write(df)
 
     st.subheader('st.json')
-    st.json({'foo':'bar','fu':'ba'})
+    st.json({'foo':'bar','ya':'hoo'})
 
     st.subheader('st.metric')
     st.metric(label="T", value="273 K", delta="1.2 K")
@@ -163,12 +164,12 @@ def demo_data():
         columns=['a', 'b', 'c'])
     st.line_chart(chart_data)
 
-    if st.checkbox('Show code ...'):
-        st.code(inspect.getsource(demo_data))
+    if st.checkbox('Show code ...', key="do_data"):
+        st.code(inspect.getsource(do_data))
 
 
 
-def demo_chart():
+def do_chart():
     df = pd.DataFrame(
         np.random.randn(20, 3),
         columns=['a', 'b', 'c'])
@@ -182,33 +183,35 @@ def demo_chart():
     st.subheader('st.bar_chart')  # not easy for unstack bar
     st.bar_chart(df)   
 
-    # st.subheader('st.pyplot') 
-    # arr = np.random.normal(1, 1, size=100)
-    # fig, ax = plt.subplots()
-    # ax.hist(arr, bins=20)
-    # st.pyplot(fig)
+    if False:  # disable - error in streamlit cloud
+        st.subheader('st.pyplot') 
+        arr = np.random.normal(1, 1, size=100)
+        fig, ax = plt.subplots()
+        ax.hist(arr, bins=20)
+        st.pyplot(fig)
 
     st.subheader('st.altair_chart') 
     c = alt.Chart(df).mark_circle().encode(
         x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
     st.altair_chart(c, use_container_width=True)
 
-    # st.subheader('st.plotly_chart') 
-    # # Add histogram data
-    # x1 = np.random.randn(200) - 2
-    # x2 = np.random.randn(200)
-    # x3 = np.random.randn(200) + 2
+    if False:  # disable - error in streamlit cloud
+        st.subheader('st.plotly_chart') 
+        # Add histogram data
+        x1 = np.random.randn(200) - 2
+        x2 = np.random.randn(200)
+        x3 = np.random.randn(200) + 2
 
-    # # Group data together
-    # hist_data = [x1, x2, x3]
+        # Group data together
+        hist_data = [x1, x2, x3]
 
-    # group_labels = ['Group 1', 'Group 2', 'Group 3']
+        group_labels = ['Group 1', 'Group 2', 'Group 3']
 
-    # # Create distplot with custom bin_size
-    # fig = ff.create_distplot(
-    #         hist_data, group_labels, bin_size=[.1, .25, .5])
+        # Create distplot with custom bin_size
+        fig = ff.create_distplot(
+                hist_data, group_labels, bin_size=[.1, .25, .5])
 
-    # st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
     st.subheader('st.graphviz_chart') 
     st.graphviz_chart('''
@@ -235,22 +238,23 @@ def demo_chart():
         columns=['lat', 'lon'])
     st.map(map_data)    
 
-    # st.subheader('st.bokeh_chart') 
-    # x = [1, 2, 3, 4, 5]
-    # y = [i*i for i in x]
+    if False:  # disable - error in streamlit cloud
+        st.subheader('st.bokeh_chart') 
+        x = [1, 2, 3, 4, 5]
+        y = [i*i for i in x]
 
-    # p = figure(
-    #     title='simple line example',
-    #     x_axis_label='x',
-    #     y_axis_label='y')
+        p = figure(
+            title='simple line example',
+            x_axis_label='x',
+            y_axis_label='y')
 
-    # p.line(x, y, legend_label='Squared', line_width=2)
-    # st.bokeh_chart(p, use_container_width=True)
+        p.line(x, y, legend_label='Squared', line_width=2)
+        st.bokeh_chart(p, use_container_width=True)
 
-    if st.checkbox('Show code ...'):
-        st.code(inspect.getsource(demo_chart))
+    if st.checkbox('Show code ...', key="do_chart"):
+        st.code(inspect.getsource(do_chart))
 
-def demo_media():
+def do_media():
     st.title('Media ')
 
     st.header('Image ')
@@ -271,12 +275,12 @@ def demo_media():
     st.subheader("clips from [SoundHelix](https://www.soundhelix.com/audio-examples)")
     st.audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
 
-    if st.checkbox('Show code ...'):
-        st.code(inspect.getsource(demo_media))
+    if st.checkbox('Show code ...', key="do_media"):
+        st.code(inspect.getsource(do_media))
 
 
 
-def demo_widget():
+def do_widget():
 
     ## UI control
     st.header('Widgets ')
@@ -321,7 +325,7 @@ def demo_widget():
     st.write(f"You prefer to be contacted by : {selectbox_contact}")
 
     st.subheader('st.checkbox ')
-    if st.checkbox('Show dataframe'):
+    if st.checkbox('Show dataframe', key="show_df"):
         chart_data = pd.DataFrame(
             np.random.randn(20, 3),
             columns=['a', 'b', 'c'])
@@ -339,11 +343,11 @@ def demo_widget():
         time.sleep(0.1)
     '...and now we\'re done!'
 
-    if st.checkbox('Show code ...'):
-        st.code(inspect.getsource(demo_widget))
+    if st.checkbox('Show code ...', key="do_widget"):
+        st.code(inspect.getsource(do_widget))
 
 
-def demo_layout():
+def do_layout():
 
     ## UI Layout
     st.header('Layout')
@@ -363,24 +367,24 @@ def demo_layout():
             ("Gryffindor", "Ravenclaw", "Hufflepuff", "Slytherin"))
         st.write(f"You are in {chosen} house!")
 
-    if st.checkbox('Show code ...'):
-        st.code(inspect.getsource(demo_layout))
+    if st.checkbox('Show code ...', key="do_layout"):
+        st.code(inspect.getsource(do_layout))
 
 
-def demo_theme():
+def do_theme():
 
     ## Theme
     st.header('Theme')
-    if st.checkbox('Show code ...'):
-        st.code(inspect.getsource(demo_theme))
+    if st.checkbox('Show code ...', key="do_theme"):
+        st.code(inspect.getsource(do_theme))
 
-def demo_cache():
+def do_cache():
     
     ## Caching
     st.header('Caching')
     num = st.slider("num", 1, 100, 5)
     ts_start = time.time()
-    fib_num = Fibonacci(num)
+    fib_num = fibonacci(num)
     ts_duration = time.time() - ts_start
     st.write(f"Fib({num}) = {fib_num} \n calculated in {ts_duration:.3f} sec")
     st.button("Re-Run")
@@ -390,16 +394,16 @@ def demo_cache():
     - sub-function within recursive calls are also cached
     """)
 
-    if st.checkbox('Show code ...'):
-        st.code(inspect.getsource(demo_cache))
+    if st.checkbox('Show code ...', key="do_cache"):
+        st.code(inspect.getsource(do_cache))
 
-def demo_learn():
+def do_learn():
 
     st.header("Learn Streamlit")
 
-    for k in st_tutorials_data.keys():
-        st.subheader(st_tutorials_data[k]["title"])
-        st_data = st_tutorials_data[k]
+    for k in data_st_tutorials.keys():
+        st.subheader(data_st_tutorials[k]["title"])
+        st_data = data_st_tutorials[k]
         if "vid" in st_data:
             # display video
             st.video(st_data["vid"]["url"])
@@ -417,99 +421,19 @@ def demo_learn():
             - [{st_data["blog"]["desc"]}]({st_data["blog"]["url"]})
             """)
     
-    if st.checkbox('Show code ...'):
-        st.code(inspect.getsource(demo_learn))
+    if st.checkbox('Show code ...', key="do_learn"):
+        st.code(inspect.getsource(do_learn))
 
-def demo_misc():
+def do_misc():
 
     st.header('Misc')
     st.write(f"os.getcwd() = {os.getcwd()}" )
 
-    if st.checkbox('Show code ...'):
-        st.code(inspect.getsource(demo_misc))
-
-## sidebar Menu
-def demo_sidebar():
-    st.sidebar.markdown('''
-    [<img src='https://streamlit.io/images/brand/streamlit-mark-color.svg' class='img-fluid' width=32 height=32>](https://streamlit.io/)
-    ''', unsafe_allow_html=True)
-
-    st.sidebar.markdown("""
-    <span style="color:red">__Streamlit__ </span>: Why-What-How
-    """, unsafe_allow_html=True)
-    st.sidebar.video("https://www.youtube.com/watch?v=R2nr1uZ8ffc")
-
-    st.sidebar.markdown("[__Concepts__](https://docs.streamlit.io/library/get-started/main-concepts)")
-    menu_options = ("Data", "Chart", "Media", "Widget", "Layout", "Theme", "Cache", "Learn", "Misc")
-    default_ix = menu_options.index("Chart")
-    menu_item = st.sidebar.selectbox("Explore: ", menu_options, index=default_ix, key="menu_item")
-    st.sidebar.markdown("""
-    <small>Since Streamlit runs script from top to bottom, we use menu-item to split
-    the whole script into sections, so only a selected section is rerun
-    </small>""", unsafe_allow_html=True)
-
-    st.sidebar.markdown("__Demos__")
-    demo_options = ["_____", "Animation", "Plotting", "Mapping", "Dataframe"]
-    demo_ix = demo_options.index("_____")
-    demo_item = st.sidebar.selectbox("Pick a demo: ", demo_options, index=demo_ix, key="demo_item")
-    st.sidebar.markdown("""
-    <small>Streamlit builtin demos (unpick to explore concept)
-    </small>""", unsafe_allow_html=True)
-    st.sidebar.code('$ streamlit hello')
+    if st.checkbox('Show code ...', key="do_misc"):
+        st.code(inspect.getsource(do_misc))
 
 
-    st.sidebar.write("""
-    __Resources__
-    - [Cheatsheet](https://docs.streamlit.io/library/cheatsheet)
-    - [API Reference](https://docs.streamlit.io/library/api-reference)
-    - [Components](https://docs.streamlit.io/library/components)
-    - [Gallery](https://streamlit.io/gallery)
-    - [Community](https://discuss.streamlit.io/)
-    """)
-
-    if st.sidebar.checkbox('Show code ...', key="sidebar_src"):
-        st.sidebar.code(inspect.getsource(demo_sidebar))
-
-# body
-def demo_body():
-    menu_item = st.session_state.menu_item
-    demo_item = st.session_state.demo_item
-
-    # if st.session_state.sidebar_src:
-    #     st.session_state.sidebar_src = False  # cannot be reset
-
-    # demo hello
-    if demo_item == "Animation":
-        demo_animation()
-    elif demo_item == "Plotting":
-        demo_plotting()
-    elif demo_item == "Mapping":
-        demo_mapping()
-    elif demo_item == "Dataframe":
-        demo_dataframe()
-    else:
-        # demo concepts
-        if menu_item == "Data":
-            demo_data()
-        elif menu_item == "Cache":
-            demo_cache()  
-        elif menu_item == "Chart":  # default
-            demo_chart()
-        elif menu_item == "Media":
-            demo_media()
-        elif menu_item == "Widget":
-            demo_widget()
-        elif menu_item == "Layout":
-            demo_layout()
-        elif menu_item == "Theme":
-            demo_theme()
-        elif menu_item == "Learn":
-            demo_learn()
-        elif menu_item == "Misc":
-            demo_misc()
-
-
-def demo_animation():
+def do_animation():
 
     st.title("Animation  Demo")
     st.markdown('''
@@ -567,10 +491,10 @@ def demo_animation():
     # rerun.
     st.button("Re-run")
 
-    if st.checkbox('Show code ...'):
-        st.code(inspect.getsource(demo_animation))
+    if st.checkbox('Show code ...', key="do_animation"):
+        st.code(inspect.getsource(do_animation))
 
-def demo_plotting():
+def do_plotting():
 
     st.title("Plotting  Demo")
     st.markdown('''
@@ -597,10 +521,10 @@ def demo_plotting():
     # rerun.
     st.button("Re-run")
 
-    if st.checkbox('Show code ...'):
-        st.code(inspect.getsource(demo_plotting))    
+    if st.checkbox('Show code ...', key="do_plotting"):
+        st.code(inspect.getsource(do_plotting))    
  
-def demo_mapping():
+def do_mapping():
 
     st.title("Mapping Demo")
     st.markdown('''
@@ -669,15 +593,15 @@ def demo_mapping():
             Connection error: %s
         """ % e.reason)
 
-    if st.checkbox('Show code ...'):
-        st.code(inspect.getsource(demo_mapping)) 
+    if st.checkbox('Show code ...', key="show_src"):
+        st.code(inspect.getsource(do_mapping)) 
 
-def demo_dataframe():
+def do_dataframe():
 
     st.title("DataFrame Demo")
     st.markdown("""
-This demo shows how to use st.write to visualize Pandas DataFrames.
-(Data courtesy of the [UN Data Explorer](http://data.un.org/Explorer.aspx).)
+    This demo shows how to use st.write to visualize Pandas DataFrames.
+    (Data courtesy of the [UN Data Explorer](http://data.un.org/Explorer.aspx).)
     """, unsafe_allow_html=True)
 
     try:
@@ -717,11 +641,90 @@ This demo shows how to use st.write to visualize Pandas DataFrames.
         )
 
     if st.checkbox('Show code ...'):
-        st.code(inspect.getsource(demo_dataframe))         
+        st.code(inspect.getsource(do_dataframe))         
+
+# body
+def do_body():
+    menu_item = st.session_state.menu_item
+    demo_item = st.session_state.demo_item
+
+
+    # demo hello
+    if demo_item == "Animation":
+        do_animation()
+    elif demo_item == "Plotting":
+        do_plotting()
+    elif demo_item == "Mapping":
+        do_mapping()
+    elif demo_item == "Dataframe":
+        do_dataframe()
+    else:
+        # demo concepts
+        if menu_item == "Data":
+            do_data()
+        elif menu_item == "Cache":
+            do_cache()  
+        elif menu_item == "Chart":  # default
+            do_chart()
+        elif menu_item == "Media":
+            do_media()
+        elif menu_item == "Widget":
+            do_widget()
+        elif menu_item == "Layout":
+            do_layout()
+        elif menu_item == "Theme":
+            do_theme()
+        elif menu_item == "Learn":
+            do_learn()
+        elif menu_item == "Misc":
+            do_misc()
+
+## sidebar Menu
+def do_sidebar():
+    st.sidebar.markdown('''
+    [<img src='https://streamlit.io/images/brand/streamlit-mark-color.svg' class='img-fluid' width=32 height=32>](https://streamlit.io/)
+    ''', unsafe_allow_html=True)
+
+    st.sidebar.markdown("""
+    <span style="color:red">__Streamlit__ </span>: Why-What-How
+    """, unsafe_allow_html=True)
+    st.sidebar.video("https://www.youtube.com/watch?v=R2nr1uZ8ffc")
+
+    st.sidebar.markdown("[__Concepts__](https://docs.streamlit.io/library/get-started/main-concepts)")
+    menu_options = sorted(["Data", "Chart", "Media", "Widget", "Layout", "Theme", "Cache", "Learn", "Misc"])
+    default_ix = menu_options.index("Chart")
+    menu_item = st.sidebar.selectbox("Explore: ", menu_options, index=default_ix, key="menu_item")
+    st.sidebar.markdown("""
+    <small>Since Streamlit runs script from top to bottom, we use menu-item to split
+    the whole script into sections, so only a selected section is rerun
+    </small>""", unsafe_allow_html=True)
+
+    st.sidebar.markdown("__Demos__")
+    demo_options = ["_____", "Animation", "Dataframe", "Plotting", "Mapping"]
+    demo_ix = demo_options.index("_____")
+    demo_item = st.sidebar.selectbox("Pick a demo: ", demo_options, index=demo_ix, key="demo_item")
+    st.sidebar.markdown("""
+    <small>Streamlit built-in demos (unpick to explore concept)
+    </small>""", unsafe_allow_html=True)
+    st.sidebar.code('$ streamlit hello')
+
+
+    st.sidebar.write("""
+    __Resources__
+    - [Cheatsheet](https://docs.streamlit.io/library/cheatsheet)
+    - [API Reference](https://docs.streamlit.io/library/api-reference)
+    - [Components](https://docs.streamlit.io/library/components)
+    - [Gallery](https://streamlit.io/gallery)
+    - [Community](https://discuss.streamlit.io/)
+    """)
+
+    if st.sidebar.checkbox('Show code ...', key="do_sidebar"):
+        st.sidebar.code(inspect.getsource(do_sidebar))
+
 
 def main():
-    demo_sidebar()
-    demo_body()
+    do_sidebar()
+    do_body()
 
 # Run main()
 if __name__ == '__main__':
