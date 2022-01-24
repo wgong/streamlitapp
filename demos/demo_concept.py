@@ -60,8 +60,8 @@ data_st_tutorials = {
             "desc" :"Building a NLP App with Streamlit,Spacy and Python"
         },
         "src" : {
-            "url" : "https://github.com/Jcharis/DataScienceTools.git",
-            "desc" :"github/JCharis/DataScienceTools"
+            "url" : "https://github.com/Jcharis/Streamlit_DataScience_Apps",
+            "desc" :"github/JCharis/Streamlit_DataScience_Apps"
         }
     },
     "part_time_larry" : {
@@ -352,12 +352,33 @@ def do_widget():
     # Add a placeholder
     latest_iteration = st.empty()
     bar = st.progress(0)
-    for i in range(30):
+    for i in range(10):
         # Update the progress bar with each iteration.
         latest_iteration.text(f'Iteration {i+1}')
         bar.progress(i + 1)
         time.sleep(0.1)
     '...and now we\'re done!'
+
+    st.subheader('st.form, st.expander')
+
+    col1,col2 = st.columns(2)
+
+    with col1:
+        with st.form(key='login_form'):
+            username = st.text_input('Username')
+            password = st.text_input('Password', type="password")
+            click_login = st.form_submit_button('Login')
+    with col2:
+        if click_login:
+            st.text("Form data: ")
+            st.json({'Username':username, 'Password': password})
+
+
+    st.markdown("""
+    Another example: [SQL Playground by JCharis](https://github.com/Jcharis/Streamlit_DataScience_Apps/tree/master/sqlplayground_app)
+    """, unsafe_allow_html=True)
+
+
 
     if st.checkbox('Show code ...', key="do_widget"):
         st.code(inspect.getsource(do_widget))
