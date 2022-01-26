@@ -14,6 +14,7 @@ import streamlit as st
 import os
 import time
 from pathlib import Path
+from io import StringIO 
 import base64
 import inspect
 from urllib.error import URLError
@@ -78,6 +79,10 @@ data_st_tutorials = {
 }
 
 # cache functions for performance
+@st.cache
+def convert_df2csv(df, index=True):
+    # IMPORTANT: Cache the conversion to prevent computation on every rerun
+    return df.to_csv(index=index).encode('utf-8')
 
 @st.cache
 def get_UN_data():
@@ -156,13 +161,49 @@ def do_data():
         columns=('col %d' % i for i in range(20)))
     st.dataframe(dataframe.style.highlight_max(axis=0))
 
+
+
     st.subheader('st.table makes static table')
     st.table(dataframe)
+
 
     chart_data = pd.DataFrame(
         np.random.randn(20, 3),
         columns=['a', 'b', 'c'])
+    st.subheader('st.line_chart')
     st.line_chart(chart_data)
+
+    st.subheader('st.download_button')
+    st.download_button(
+        label="Download dataframe as CSV",
+        data=convert_df2csv(chart_data, index=False),
+        file_name='df.csv',
+        mime='text/csv',
+    )
+
+    st.subheader('st.uploaded_file')
+    csv_file = st.file_uploader("Choose a csv file", key="upload_csv")
+    if csv_file is not None:
+        df_csv = pd.read_csv(csv_file)
+        st.write("Your uploaded CSV file:")
+        st.dataframe(df_csv)
+
+    txt_file = st.file_uploader("Choose a text file", key="upload_txt")
+    if txt_file is not None:
+        # To convert to a string based IO:
+        stringio = StringIO(txt_file.getvalue().decode("utf-8"))
+        # st.write(stringio)
+
+        # To read file as string:
+        string_data = stringio.read()
+        st.write("Your uploaded text file:")
+        st.write(string_data)
+
+    img_file = st.file_uploader("Choose an image file", key="upload_img")
+    if img_file is not None:
+        img_bytes = img_file.getvalue()
+        st.write("Your uploaded image file:")
+        st.image(img_bytes)
 
     if st.checkbox('Show code ...', key="do_data"):
         st.code(inspect.getsource(do_data))
@@ -464,6 +505,20 @@ def do_learn():
 def do_misc():
 
     st.header('Misc')
+
+    st.subheader("st.echo")
+    with st.echo():
+        st.write('This code will be printed')
+
+        a = 10
+        b = 20
+        print(f"{a} + {b} = {a+b}")
+
+    st.subheader("st.help")
+    st.write("st.help(pd.DataFrame)")
+    st.help(pd.DataFrame)
+
+
     st.write(f"os.getcwd() = {os.getcwd()}" )
 
     if st.checkbox('Show code ...', key="do_misc"):
@@ -719,7 +774,7 @@ def do_body():
 ## sidebar Menu
 def do_sidebar():
     st.sidebar.markdown('''
-    [<img src='https://streamlit.io/images/brand/streamlit-mark-color.svg' class='img-fluid' width=32 height=32>](https://streamlit.io/)
+    [<img src='https://streamlit.io/images/brand/streamlit-mark-color.svg' class='img-fluid' width=64 height=64>](https://streamlit.io/)
     ''', unsafe_allow_html=True)
 
     st.sidebar.markdown("""
