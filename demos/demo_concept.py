@@ -771,6 +771,9 @@ def do_body():
         elif menu_item == "Misc":
             do_misc()
 
+    if st.sidebar.checkbox('Show code ...', key="do_body"):
+        st.sidebar.code(inspect.getsource(do_body))
+
 ## sidebar Menu
 def do_sidebar():
     st.sidebar.markdown('''
