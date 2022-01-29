@@ -2,10 +2,10 @@
 Streamlit Concept and Hello Demo
 based on 
 1) https://docs.streamlit.io/library/get-started/main-concepts
-2) 
+2) streamlit hello demo
 
 The source code: 
-    https://github.com/wgong/streamlitapp/blob/main/demos/do_concept.py
+    https://github.com/wgong/streamlitapp/blob/main/demos/demo_concept.py
 
 """
 
@@ -77,6 +77,7 @@ data_st_tutorials = {
         }
     }
 }
+
 
 # cache functions for performance
 @st.cache
@@ -735,49 +736,50 @@ def do_dataframe():
     if st.checkbox('Show code ...'):
         st.code(inspect.getsource(do_dataframe))         
 
+def do_nothing():
+    pass
+
+
+# menu_item to handler mapping
+menu_dict = {
+    "demos" : {
+        "Animation": do_animation,
+        "Plotting": do_plotting,
+        "Mapping": do_mapping,
+        "Dataframe": do_dataframe
+    },
+    "concepts" : {
+            "Data": do_data,
+            "Cache": do_cache,
+            "Chart": do_chart,
+            "Media": do_media,
+            "Widget": do_widget,
+            "Layout": do_layout,
+            "Theme": do_theme,
+            "Learn": do_learn,
+            "Misc": do_misc
+    }
+}
+
+
 # body
 def do_body():
     menu_item = st.session_state.menu_item
     demo_item = st.session_state.demo_item
 
-
-    # demo hello
-    if demo_item == "Animation":
-        do_animation()
-    elif demo_item == "Plotting":
-        do_plotting()
-    elif demo_item == "Mapping":
-        do_mapping()
-    elif demo_item == "Dataframe":
-        do_dataframe()
+    if demo_item in menu_dict["demos"].keys():
+        menu_dict["demos"][demo_item]()
     else:
-        # demo concepts
-        if menu_item == "Data":
-            do_data()
-        elif menu_item == "Cache":
-            do_cache()  
-        elif menu_item == "Chart":  # default
-            do_chart()
-        elif menu_item == "Media":
-            do_media()
-        elif menu_item == "Widget":
-            do_widget()
-        elif menu_item == "Layout":
-            do_layout()
-        elif menu_item == "Theme":
-            do_theme()
-        elif menu_item == "Learn":
-            do_learn()
-        elif menu_item == "Misc":
-            do_misc()
+        if menu_item in menu_dict["concepts"].keys():
+            menu_dict["concepts"][menu_item]()
 
-    if st.sidebar.checkbox('Show code ...', key="do_body"):
+    if st.sidebar.checkbox('Show body source ...', key="do_body"):
         st.sidebar.code(inspect.getsource(do_body))
 
 ## sidebar Menu
 def do_sidebar():
     st.sidebar.markdown('''
-    [<img src='https://streamlit.io/images/brand/streamlit-mark-color.svg' class='img-fluid' width=64 height=64>](https://streamlit.io/)
+    [<img src='https://streamlit.io/images/brand/streamlit-mark-color.svg' class='img-fluid' width=128 height=64>](https://streamlit.io/)
     ''', unsafe_allow_html=True)
 
     st.sidebar.markdown("""
@@ -786,7 +788,7 @@ def do_sidebar():
     st.sidebar.video("https://www.youtube.com/watch?v=R2nr1uZ8ffc")
 
     st.sidebar.markdown("[__Concepts__](https://docs.streamlit.io/library/get-started/main-concepts)")
-    menu_options = sorted(["Data", "Chart", "Media", "Widget", "Layout", "Theme", "Cache", "Learn", "Misc"])
+    menu_options = sorted(list(menu_dict["concepts"].keys()))
     default_ix = menu_options.index("Chart")
     menu_item = st.sidebar.selectbox("Explore: ", menu_options, index=default_ix, key="menu_item")
     st.sidebar.markdown("""
@@ -795,7 +797,7 @@ def do_sidebar():
     </small>""", unsafe_allow_html=True)
 
     st.sidebar.markdown("__Demos__")
-    demo_options = ["_____", "Animation", "Dataframe", "Plotting", "Mapping"]
+    demo_options = ["_____"] + list(menu_dict["demos"].keys())
     demo_ix = demo_options.index("_____")
     demo_item = st.sidebar.selectbox("Pick a demo: ", demo_options, index=demo_ix, key="demo_item")
     st.sidebar.markdown("""
@@ -813,7 +815,7 @@ def do_sidebar():
     - [Community](https://discuss.streamlit.io/)
     """)
 
-    if st.sidebar.checkbox('Show code ...', key="do_sidebar"):
+    if st.sidebar.checkbox('Show sidebar source ...', key="do_sidebar"):
         st.sidebar.code(inspect.getsource(do_sidebar))
 
 
@@ -821,6 +823,5 @@ def main():
     do_sidebar()
     do_body()
 
-# Run main()
 if __name__ == '__main__':
     main()
