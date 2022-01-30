@@ -134,7 +134,9 @@ def do_data():
     ## Display Data
     st.header('Data')
 
+
     st.subheader('st.write anything')
+
     st.write(pd.DataFrame({
         'first column': list(range(5)),
         'second column': [100*i for i in range(5)]
@@ -151,6 +153,20 @@ def do_data():
 
     st.subheader('st.metric')
     st.metric(label="T", value="273 K", delta="1.2 K")
+
+    st.subheader('st.latex')
+    st.write("Beautiful equations: ")
+    st.latex(r''' e^{i\pi} + 1 = 0 ''')
+    st.latex(r""" F = ma """)
+    st.latex(r""" E = mc^2 """)
+    st.latex(r""" E = h\nu """)
+    st.latex(r"""
+    - \frac{{\hbar ^2 }}{{2m}}\frac{{\partial ^2 \psi (x,t)}}{{\partial x^2 }} + U(x)\psi (x,t) = i\hbar \frac{{\partial \psi (x,t)}}{{\partial t}}
+    """)
+
+    st.markdown("""
+    More equations can be found at [http://www.equationsheet.com/](http://www.equationsheet.com/)
+    """)
 
 
     st.subheader('st.dataframe makes interactive table')
@@ -364,6 +380,21 @@ def do_widget():
     st.text_input("Your name", key="name")
     # You can access the value at any point with:
     st.write(f"You entered: {st.session_state.name}")
+
+    col_date, col_time = st.columns(2)
+    with col_date:
+        st.subheader('st.date_input ')
+        birthday = st.date_input('Your birthday')
+        st.write(f"Birthday = {birthday}")
+
+    with col_time:
+        st.subheader('st.time_input ')
+        meet_time = st.time_input('Meeting time')
+        st.write(f"Meet at {meet_time}")
+
+    st.subheader('st.color_picker ')
+    fav_color = st.color_picker('Favorite color')
+    st.write(f"Favorite color = {fav_color}")
 
     st.subheader('st.selectbox ')
     df = pd.DataFrame({
