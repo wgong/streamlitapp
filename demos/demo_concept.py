@@ -1,11 +1,13 @@
 """
-Streamlit Concept and Hello Demo
-based on 
-1) https://docs.streamlit.io/library/get-started/main-concepts
-2) streamlit hello demo
+Streamlit Concept and Hello Demo based on 
+    - https://docs.streamlit.io/library/get-started/main-concepts
+    - streamlit hello
 
-The source code: 
+Source code: 
     https://github.com/wgong/streamlitapp/blob/main/demos/demo_concept.py
+
+Deployed at:
+    https://share.streamlit.io/wgong/streamlitapp/main/demos/demo_concept.py
 
 """
 
@@ -161,7 +163,7 @@ def do_data():
     st.latex(r""" E = mc^2 """)
     st.latex(r""" E = h\nu """)
     st.latex(r"""
-    - \frac{{\hbar ^2 }}{{2m}}\frac{{\partial ^2 \psi (x,t)}}{{\partial x^2 }} + U(x)\psi (x,t) = i\hbar \frac{{\partial \psi (x,t)}}{{\partial t}}
+    i\hbar \frac{{\partial \psi (x,t)}}{{\partial t}} = - \frac{{\hbar ^2 }}{{2m}}\frac{{\partial ^2 \psi (x,t)}}{{\partial x^2 }} + U(x)\psi (x,t) 
     """)
 
     st.markdown("""
@@ -804,8 +806,11 @@ def do_body():
         if menu_item in menu_dict["concepts"].keys():
             menu_dict["concepts"][menu_item]()
 
-    if st.sidebar.checkbox('Code for body', key="do_body"):
-        st.sidebar.code(inspect.getsource(do_body))
+    if st.sidebar.checkbox('Complete code'):
+        with open(__file__) as f:
+            st.sidebar.code(f.read())
+
+    
 
 ## sidebar Menu
 def do_sidebar():
