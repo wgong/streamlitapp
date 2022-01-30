@@ -206,7 +206,7 @@ def do_data():
         st.write("Your uploaded image file:")
         st.image(img_bytes)
 
-    if st.checkbox('Show code ...', key="do_data"):
+    with st.expander("Show code"):
         st.code(inspect.getsource(do_data))
 
 
@@ -293,7 +293,7 @@ def do_chart():
         p.line(x, y, legend_label='Squared', line_width=2)
         st.bokeh_chart(p, use_container_width=True)
 
-    if st.checkbox('Show code ...', key="do_chart"):
+    with st.expander("Show code"):
         st.code(inspect.getsource(do_chart))
 
 def do_media():
@@ -333,7 +333,7 @@ def do_media():
     """)
     st.audio("https://stream.440hz-radio.de/440hz-main.mp3?start=1597517799")
 
-    if st.checkbox('Show code ...', key="do_media"):
+    with st.expander("Show code"):
         st.code(inspect.getsource(do_media))
 
 
@@ -422,7 +422,7 @@ def do_widget():
 
 
 
-    if st.checkbox('Show code ...', key="do_widget"):
+    with st.expander("Show code"):
         st.code(inspect.getsource(do_widget))
 
 
@@ -446,7 +446,7 @@ def do_layout():
             ("Gryffindor", "Ravenclaw", "Hufflepuff", "Slytherin"))
         st.write(f"You are in {chosen} house!")
 
-    if st.checkbox('Show code ...', key="do_layout"):
+    with st.expander("Show code"):
         st.code(inspect.getsource(do_layout))
 
 
@@ -454,7 +454,7 @@ def do_theme():
 
     ## Theme
     st.header('Theme')
-    if st.checkbox('Show code ...', key="do_theme"):
+    with st.expander("Show code"):
         st.code(inspect.getsource(do_theme))
 
 def do_cache():
@@ -473,7 +473,7 @@ def do_cache():
     - sub-function within recursive calls are also cached
     """)
 
-    if st.checkbox('Show code ...', key="do_cache"):
+    with st.expander("Show code"):
         st.code(inspect.getsource(do_cache))
 
 def do_learn():
@@ -500,7 +500,7 @@ def do_learn():
             - [{st_data["blog"]["desc"]}]({st_data["blog"]["url"]})
             """)
     
-    if st.checkbox('Show code ...', key="do_learn"):
+    with st.expander("Show code"):
         st.code(inspect.getsource(do_learn))
 
 def do_misc():
@@ -522,7 +522,7 @@ def do_misc():
 
     st.write(f"os.getcwd() = {os.getcwd()}" )
 
-    if st.checkbox('Show code ...', key="do_misc"):
+    with st.expander("Show code"):
         st.code(inspect.getsource(do_misc))
 
 
@@ -584,7 +584,7 @@ def do_animation():
     # rerun.
     st.button("Re-run")
 
-    if st.checkbox('Show code ...', key="do_animation"):
+    with st.expander("Show code"):
         st.code(inspect.getsource(do_animation))
 
 def do_plotting():
@@ -614,7 +614,7 @@ def do_plotting():
     # rerun.
     st.button("Re-run")
 
-    if st.checkbox('Show code ...', key="do_plotting"):
+    with st.expander("Show code"):
         st.code(inspect.getsource(do_plotting))    
  
 def do_mapping():
@@ -686,7 +686,7 @@ def do_mapping():
             Connection error: %s
         """ % e.reason)
 
-    if st.checkbox('Show code ...', key="show_src"):
+    with st.expander("Show code"):
         st.code(inspect.getsource(do_mapping)) 
 
 def do_dataframe():
@@ -733,7 +733,7 @@ def do_dataframe():
             % e.reason
         )
 
-    if st.checkbox('Show code ...'):
+    with st.expander("Show code"):
         st.code(inspect.getsource(do_dataframe))         
 
 def do_nothing():
@@ -773,7 +773,7 @@ def do_body():
         if menu_item in menu_dict["concepts"].keys():
             menu_dict["concepts"][menu_item]()
 
-    if st.sidebar.checkbox('Show body source ...', key="do_body"):
+    if st.sidebar.checkbox('Code for body', key="do_body"):
         st.sidebar.code(inspect.getsource(do_body))
 
 ## sidebar Menu
@@ -815,7 +815,7 @@ def do_sidebar():
     - [Community](https://discuss.streamlit.io/)
     """)
 
-    if st.sidebar.checkbox('Show sidebar source ...', key="do_sidebar"):
+    if st.sidebar.checkbox('Code for sidebar', key="do_sidebar"):
         st.sidebar.code(inspect.getsource(do_sidebar))
 
 
