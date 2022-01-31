@@ -9,11 +9,13 @@ from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode
 
 
 @st.cache(allow_output_mutation=True)
-def load_data(url = "https://raw.githubusercontent.com/fivethirtyeight/data/master/airline-safety/airline-safety.csv", fmt="csv"):
-    if fmt.lower() == "csv" or url.endswith(".csv"):
+def load_data(url):
+    if url.endswith(".csv"):
         return pd.read_csv(url)
+    if url.endswith(".xls") or url.endswith(".xlsx"):
+        return pd.read_excel(url)
     else:
-        st.error(f"[load_data] unsupported data file: {url}, fmt: {fmt}")
+        st.error(f"[load_data] unsupported data file: {url}, must be .csv, .xls, .xlsx")
         return None
 
 # config Grid Options
@@ -55,8 +57,13 @@ if enable_selection:
 
 enable_pagination = st.sidebar.checkbox("Enable pagination", value=True)
 
+st.header("Streamlit Ag-Grid demo")
+data_options = ["https://raw.githubusercontent.com/fivethirtyeight/data/master/airline-safety/airline-safety.csv",
+    "data/generic-food.csv","data/generic-food.xls"]
+data_url = st.selectbox("Select data: ", data_options, key="data_url")
+
 # create df
-df = load_data()
+df = load_data(data_url)
 
 #Infer basic colDefs from dataframe types
 gb = GridOptionsBuilder.from_dataframe(df)
@@ -101,7 +108,7 @@ gb.configure_grid_options(domLayout='normal')
 gridOptions = gb.build()
 
 #Display the grid
-st.header("Streamlit Ag-Grid demo")
+
 
 # instantiate AgGrid
 
