@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd 
+# import inspect
 # import numpy as np
 # import altair as alt
 # from itertools import cycle
@@ -15,21 +16,24 @@ def load_data(url = "https://raw.githubusercontent.com/fivethirtyeight/data/mast
         st.error(f"[load_data] unsupported data file: {url}, fmt: {fmt}")
         return None
 
-#Example controlers
+# config Grid Options
 st.sidebar.subheader("St-AgGrid example options")
 
 page_size = st.sidebar.number_input("rows", min_value=10, value=10)
-grid_height = st.sidebar.number_input("Grid height", min_value=300, max_value=800, value=300)
+grid_height = st.sidebar.number_input("Grid height", min_value=200, max_value=800, value=350)
 
 return_mode = st.sidebar.selectbox("Return Mode", list(DataReturnMode.__members__), index=1)
 return_mode_value = DataReturnMode.__members__[return_mode]
+return_mode_value = DataReturnMode.FILTERED
+st.sidebar.write(f"return_mode_value: {return_mode_value}")
 
 update_mode = st.sidebar.selectbox("Update Mode", list(GridUpdateMode.__members__), index=6)
 update_mode_value = GridUpdateMode.__members__[update_mode]
+update_mode_value = GridUpdateMode.MODEL_CHANGED
+st.sidebar.write(f"update_mode_value: {update_mode_value}")
 
-
-#features
-fit_columns_on_grid_load = st.sidebar.checkbox("Fit Grid Columns on Load")
+fit_columns_on_grid_load = True # st.sidebar.checkbox("Fit Grid Columns on Load")
+st.sidebar.write(f"fit_columns_on_grid_load: {fit_columns_on_grid_load}")
 
 enable_selection=st.sidebar.checkbox("Enable row selection", value=True)
 if enable_selection:
@@ -51,6 +55,7 @@ if enable_selection:
 
 enable_pagination = st.sidebar.checkbox("Enable pagination", value=True)
 
+# create df
 df = load_data()
 
 #Infer basic colDefs from dataframe types
@@ -65,22 +70,22 @@ gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, agg
 # gb.configure_column("chocolate", type=["numericColumn", "numberColumnFilter", "customCurrencyFormat"], custom_currency_symbol="R$", aggFunc='max')
 
 #configures last row to use custom styles based on cell's value, injecting JsCode on components front end
-cellsytle_jscode = JsCode("""
-function(params) {
-    if (params.value.startswith("Air")) {
-        return {
-            'color': 'white',
-            'backgroundColor': 'darkred'
-        }
-    } else {
-        return {
-            'color': 'black',
-            'backgroundColor': 'white'
-        }
-    }
-};
-""")
-# gb.configure_column("group", cellStyle=cellsytle_jscode)
+# cellsytle_jscode = JsCode("""
+# function(params) {
+#     if (params.value.startswith("Air")) {
+#         return {
+#             'color': 'white',
+#             'backgroundColor': 'darkred'
+#         }
+#     } else {
+#         return {
+#             'color': 'black',
+#             'backgroundColor': 'white'
+#         }
+#     }
+# };
+# """)
+# gb.configure_column("airline", cellStyle=cellsytle_jscode)
 
 if enable_selection:
     gb.configure_selection(selection_mode)
@@ -96,8 +101,9 @@ gb.configure_grid_options(domLayout='normal')
 gridOptions = gb.build()
 
 #Display the grid
-st.header("Streamlit Ag-Grid")
+st.header("Streamlit Ag-Grid demo")
 
+# instantiate AgGrid
 
 grid_response = AgGrid(
     df, 
@@ -120,5 +126,17 @@ selected_df = pd.DataFrame(selected)
 # # https://github.com/streamlit/streamlit/issues/3781
 # st.markdown(grid_response['data'].to_html(), unsafe_allow_html=True)
 
+# Show selected rows
+
 st.subheader("grid selection:")
 st.write(grid_response['selected_rows'])
+
+
+st.subheader("grid options:")
+st.write(f"gridOptions type: {type(gridOptions)}")
+st.write(gridOptions)
+
+
+with st.expander("Show code"):
+    with open(__file__) as f:
+        st.code(f.read())       
