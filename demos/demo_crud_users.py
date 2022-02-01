@@ -5,35 +5,9 @@ import hashlib
 def _hashit(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
-def auth(sidebar=True):
-
-    try:
-        conn = sql.connect("file:users.db?mode=ro", uri=True)
-    except sql.OperationalError:
-        st.error(
-            "Authentication Database is Not Found.\n\nConsider running authlib script in standalone mode to generate."
-        )
-        return None
-
-    input_widget = st.sidebar.text_input if sidebar else st.text_input
-    checkbox_widget = st.sidebar.checkbox if sidebar else st.checkbox
-    user = input_widget("Username:")
-
-    data = conn.execute("select * from users where username = ?", (user,)).fetchone()
-    if user:
-        password = input_widget("Enter Password:", type="password")
-        if data and password == data[2]:
-            if data[3]:
-                if checkbox_widget("Check to edit user database"):
-                    manage_users()
-            return user
-        else:
-            return None
-    return None
-
 ## Read
-def _list_users(conn):
-    db_data = conn.execute("select username,password,su,notes from users").fetchall()
+def _read_users(conn):
+    db_data = conn.execute("select username,password,su,notes from users order by username").fetchall()
     if db_data:
         table_data = list(zip(*db_data))
         st.table(
@@ -54,13 +28,13 @@ def clear_add_form():
         user_ = st.session_state["add_username"]
         pass_ = st.session_state["add_password"]
         if user_ and pass_:
-            super_ = st.session_state["add_su"]
+            su_ = st.session_state["add_su"]
             notes_ = st.session_state["add_notes"]
             conn.execute(
                 "INSERT INTO USERS(username, password, su, notes) VALUES(?,?,?,?)",
-                (user_, _hashit(pass_), super_, notes_),
+                (user_, _hashit(pass_), su_, notes_),
             )
-            st.text("User added")
+
     st.session_state["add_username"] = ""
     st.session_state["add_password"] = ""
     st.session_state["add_su"] = False
@@ -74,7 +48,7 @@ def _create_users(conn):
         st.text_area('Notes', key="add_notes")
         st.form_submit_button('Add User', on_click=clear_add_form)
 
-    _list_users(conn)
+    _read_users(conn)
 
 
 
@@ -84,12 +58,12 @@ def clear_upd_form():
     with conn:
         user_id = st.session_state["user_id"]
         pass_ = st.session_state["upd_password"]
-        super_ = st.session_state["upd_su"]
+        su_ = st.session_state["upd_su"]
         notes_ = st.session_state["upd_notes"]
         conn.execute(
-                "update users set password = ?,su = ?, notes = ? where username = ?", (_hashit(pass_),super_,notes_,user_id)
+                "update users set password = ?,su = ?, notes = ? where username = ?", (_hashit(pass_),su_,notes_,user_id)
             )
-        st.text("User updated")   
+
     st.session_state["upd_password"] = ""
     st.session_state["upd_su"] = False
     st.session_state["upd_notes"] = ""
@@ -109,7 +83,7 @@ def _update_users(conn):
         st.text_area('Notes', value=user_dict[user_id][3], key="upd_notes")
         st.form_submit_button('Update', on_click=clear_upd_form)
 
-    _list_users(conn)
+    _read_users(conn)
 
 ## Delete
 def _delete_users(conn):
@@ -121,7 +95,7 @@ def _delete_users(conn):
             with conn:
                 conn.execute("delete from users where username = ?", (user_id,))
                 st.write(f"User {user_id} deleted")
-            _list_users(conn)
+            _read_users(conn)
 
 
 def manage_users():
@@ -136,22 +110,23 @@ def manage_users():
             )
         """)
 
-        modes =  {
-            "View": _list_users,
+        actions =  {
+            "Read": _read_users,
             "Create": _create_users,
             "Update": _update_users,
             "Delete": _delete_users,
         }
+        # horizontal radio buttons
         # https://discuss.streamlit.io/t/horizontal-radio-buttons/2114/7
         st.write('<style>div.row-widget.stRadio > div{flex-direction:row;justify-content: center;} </style>', unsafe_allow_html=True)
         st.write('<style>div.st-bf{flex-direction:column;} div.st-ag{font-weight:bold;padding-left:2px;}</style>', unsafe_allow_html=True)
-        mode = st.radio("Action", modes.keys())
-        modes[mode](conn)
+        action = st.radio("Operation: ", actions.keys())
+        actions[action](conn)
 
 
 if __name__ == "__main__":
-    st.write(
-        "Manager users database"
+    st.subheader(
+        "Database CRUD operations on 'users' table"
     )
-    if st.checkbox("Check to continue"):
+    if st.checkbox("Go"):
         manage_users()
