@@ -1,4 +1,6 @@
 import streamlit as st
+from streamlit_option_menu import option_menu
+
 import sqlite3 as sql
 import hashlib
 
@@ -110,23 +112,32 @@ def manage_users():
             )
         """)
 
-        actions =  {
-            "Read": _read_users,
-            "Create": _create_users,
-            "Update": _update_users,
-            "Delete": _delete_users,
+        action_dict =  {
+            "Read": {"op": _read_users, "icon": "list-task"}, 
+            "Create": {"op": _create_users, "icon": "plus-square-fill"},
+            "Update": {"op": _update_users, "icon": "pencil-square"},
+            "Delete": {"op": _delete_users, "icon": "shield-fill-x"},
         }
-        # horizontal radio buttons
-        # https://discuss.streamlit.io/t/horizontal-radio-buttons/2114/7
-        st.write('<style>div.row-widget.stRadio > div{flex-direction:row;justify-content: center;} </style>', unsafe_allow_html=True)
-        st.write('<style>div.st-bf{flex-direction:column;} div.st-ag{font-weight:bold;padding-left:2px;}</style>', unsafe_allow_html=True)
-        action = st.radio("Operation: ", actions.keys())
-        actions[action](conn)
+        # use option-menu
+        actions = list(action_dict.keys())
+        icons = [action_dict[i]["icon"] for i in actions]
+        action = option_menu(None, actions, 
+            icons=icons, 
+            menu_icon="cast", 
+            default_index=0, 
+            orientation="horizontal")
+
+        # # horizontal radio buttons
+        # # https://discuss.streamlit.io/t/horizontal-radio-buttons/2114/7
+        # st.write('<style>div.row-widget.stRadio > div{flex-direction:row;justify-content: center;} </style>', unsafe_allow_html=True)
+        # st.write('<style>div.st-bf{flex-direction:column;} div.st-ag{font-weight:bold;padding-left:2px;}</style>', unsafe_allow_html=True)
+        # action = st.radio("Operation: ", action_dict.keys())
+        action_dict[action]["op"](conn)
 
 
 if __name__ == "__main__":
-    st.subheader(
-        "Database CRUD operations on 'users' table"
-    )
-    if st.checkbox("Go"):
+    with st.sidebar:
+        st.subheader("Manage 'users' table:")
+        go = st.checkbox("Go")
+    if go:
         manage_users()
