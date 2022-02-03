@@ -4,6 +4,8 @@ from streamlit_option_menu import option_menu
 import sqlite3 as sql
 import hashlib
 
+_DB_NAME = "users.db"
+
 def _hashit(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
@@ -25,8 +27,8 @@ def _read_users(conn):
 
 ## Create
 def clear_add_form():
-    conn = sql.connect("file:users.db?mode=rw", uri=True)
-    with conn:
+    db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
+    with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
         user_ = st.session_state["add_username"]
         pass_ = st.session_state["add_password"]
         if user_ and pass_:
@@ -56,8 +58,8 @@ def _create_users(conn):
 
 ## Update
 def clear_upd_form():
-    conn = sql.connect("file:users.db?mode=rw", uri=True)
-    with conn:
+    db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
+    with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
         user_id = st.session_state["user_id"]
         pass_ = st.session_state["upd_password"]
         su_ = st.session_state["upd_su"]
@@ -99,45 +101,69 @@ def _delete_users(conn):
                 st.write(f"User {user_id} deleted")
             _read_users(conn)
 
+def _manage_db():
+    create_table = """create table if not exists users (
+        id INTEGER PRIMARY KEY,
+        username UNIQUE ON CONFLICT REPLACE, 
+        password, 
+        su, 
+        notes
+    );"""
+    db_name = st.text_input('SQLite database name', value=_DB_NAME, key="db_name")
+    ddl_sql = st.text_area("DDL SQL", height=250, value=create_table, key="ddl_sql")
+    if st.button("Execute"):
+        with sql.connect(f"file:{db_name}?mode=rwc", uri=True) as conn:
+            conn.execute(ddl_sql)
 
-def manage_users():
-    with sql.connect("file:users.db?mode=rwc", uri=True) as conn:
-        conn.execute("""
-            create table if not exists users (
-                id INTEGER PRIMARY KEY,
-                username UNIQUE ON CONFLICT REPLACE, 
-                password, 
-                su, 
-                notes
-            )
-        """)
+    with st.expander("Show code"):
+        with open(__file__) as f:
+            # st.code(inspect.getsource(do_widget))
+            st.code(f.read())            
 
-        action_dict =  {
-            "Read": {"op": _read_users, "icon": "list-task"}, 
-            "Create": {"op": _create_users, "icon": "plus-square-fill"},
-            "Update": {"op": _update_users, "icon": "pencil-square"},
-            "Delete": {"op": _delete_users, "icon": "shield-fill-x"},
-        }
-        # use option-menu
-        actions = list(action_dict.keys())
-        icons = [action_dict[i]["icon"] for i in actions]
-        action = option_menu(None, actions, 
-            icons=icons, 
-            menu_icon="cast", 
-            default_index=0, 
-            orientation="horizontal")
+def _manage_users():
 
-        # # horizontal radio buttons
-        # # https://discuss.streamlit.io/t/horizontal-radio-buttons/2114/7
-        # st.write('<style>div.row-widget.stRadio > div{flex-direction:row;justify-content: center;} </style>', unsafe_allow_html=True)
-        # st.write('<style>div.st-bf{flex-direction:column;} div.st-ag{font-weight:bold;padding-left:2px;}</style>', unsafe_allow_html=True)
-        # action = st.radio("Operation: ", action_dict.keys())
+    # use option-menu
+    actions = list(action_dict.keys())
+    icons = [action_dict[i]["icon"] for i in actions]
+    action = option_menu(None, actions, 
+        icons=icons, 
+        menu_icon="cast", 
+        default_index=0, 
+        orientation="horizontal")
+
+    # # horizontal radio buttons
+    # # https://discuss.streamlit.io/t/horizontal-radio-buttons/2114/7
+    # st.write('<style>div.row-widget.stRadio > div{flex-direction:row;justify-content: center;} </style>', unsafe_allow_html=True)
+    # st.write('<style>div.st-bf{flex-direction:column;} div.st-ag{font-weight:bold;padding-left:2px;}</style>', unsafe_allow_html=True)
+    # action = st.radio("Operation: ", action_dict.keys())
+    db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
+    with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
         action_dict[action]["op"](conn)
 
 
+# icons : https://icons.getbootstrap.com/
+
+meta_dict = {
+    "Table": {"op": _manage_users, "icon": "file-spreadsheet"}, 
+    "Database": {"op": _manage_db, "icon": "box"}, 
+}
+
+action_dict =  {
+    "List": {"op": _read_users, "icon": "list-task"}, 
+    "Add": {"op": _create_users, "icon": "plus-square-fill"},
+    "Update": {"op": _update_users, "icon": "pencil-square"},
+    "Delete": {"op": _delete_users, "icon": "shield-fill-x"},
+}
+
+
 if __name__ == "__main__":
+    objects = list(meta_dict.keys())
+    icons = [meta_dict[i]["icon"] for i in objects]
     with st.sidebar:
-        st.subheader("Manage 'users' table:")
-        go = st.checkbox("Go")
-    if go:
-        manage_users()
+        action = option_menu("Manage", objects, 
+            icons=icons, 
+            menu_icon="columns-gap", 
+            default_index=0)
+
+    if action:
+        meta_dict[action]["op"]()

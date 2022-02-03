@@ -383,6 +383,11 @@ def do_widget():
     # You can access the value at any point with:
     st.write(f"You entered: {st.session_state.name}")
 
+    st.subheader('st.text_area ')
+    st.text_area("Your name", key="text")
+    # You can access the value at any point with:
+    st.write(f"You entered: {st.session_state.text}")
+
     col_date, col_time = st.columns(2)
     with col_date:
         st.subheader('st.date_input ')
