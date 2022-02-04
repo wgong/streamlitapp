@@ -46,11 +46,11 @@ def clear_add_form():
 
 def _create_users(conn):
     with st.form(key="add_user"):
-        st.text_input("Enter Username", key="add_username")
-        st.text_input("Enter Password (required)", key="add_password")
-        st.checkbox("Is this a superuser?", value=False, key="add_su")
+        st.text_input("Username (required)", key="add_username")
+        st.text_input("Password (required)", key="add_password")
+        st.checkbox("Is a superuser?", value=False, key="add_su")
         st.text_area('Notes', key="add_notes")
-        st.form_submit_button('Add User', on_click=clear_add_form)
+        st.form_submit_button('Add', on_click=clear_add_form)
 
     _read_users(conn)
 
@@ -80,7 +80,7 @@ def _update_users(conn):
     for row in db_data:
         user_dict[row[0]] = row
     user_id = st.selectbox("Select user", options=sorted(list(user_dict.keys())), key="user_id")
-    st.write(f"Update user: {user_id}")
+    # st.write(f"user: {user_id}")
     with st.form(key="upd_user"):
         st.text_input("Password:", value=user_dict[user_id][1], key="upd_password")
         st.checkbox("Is superuser?", value=user_dict[user_id][2], key="upd_su")
@@ -95,7 +95,7 @@ def _delete_users(conn):
     # userlist.insert(0, "")
     user_id = st.selectbox("Select user", options=userlist)
     if user_id:
-        if st.button(f"Remove"):
+        if st.button(f"Delete"):
             with conn:
                 conn.execute("delete from users where username = ?", (user_id,))
                 st.write(f"User {user_id} deleted")
@@ -149,7 +149,7 @@ meta_dict = {
 }
 
 action_dict =  {
-    "List": {"op": _read_users, "icon": "list-task"}, 
+    "View": {"op": _read_users, "icon": "list-task"}, 
     "Add": {"op": _create_users, "icon": "plus-square-fill"},
     "Update": {"op": _update_users, "icon": "pencil-square"},
     "Delete": {"op": _delete_users, "icon": "shield-fill-x"},

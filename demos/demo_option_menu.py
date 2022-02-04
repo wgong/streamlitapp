@@ -20,8 +20,10 @@ if selected == "Home":
     st.write("home is where the heart is")
 elif selected == "Horizontal":
     selected2 = option_menu(None, ["Upload", "Tasks", "Settings"], 
-        icons=["cloud-upload", "list-task", "gear"], menu_icon="cast", 
-        default_index=0, orientation="horizontal")
+        icons=["cloud-upload", "list-task", "gear"], 
+        menu_icon="cast", 
+        default_index=0, 
+        orientation="horizontal")
     selected2
 else:
     st.write("settings is my bettings")
