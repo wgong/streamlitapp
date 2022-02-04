@@ -41,19 +41,19 @@ grid_dict = {
 def _hashit(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
-def get_users(conn):
-    select_sql = """
-        select username,password,su,notes from users
+def get_records(conn, table_name="users", limit=10000):
+    select_sql = f"""
+        select * from {table_name} limit {limit}
     """
     return pd.read_sql(select_sql, conn)
 
 ## Read
-def _read_users(conn, context="read"):
+def _view_records(conn, context="read"):
     # return selected_df
 
     enable_selection=True if context in ["update", "delete"] else False
 
-    df = get_users(conn)
+    df = get_records(conn)
 
     ## grid options
     gb = GridOptionsBuilder.from_dataframe(df)
@@ -102,9 +102,9 @@ def clear_add_form():
     st.session_state["add_su"] = False
     st.session_state["add_notes"] = ""
 
-def _create_users(conn):
+def _create_record(conn):
 
-    _read_users(conn, context="create")
+    _view_records(conn, context="create")
     with st.form(key="add_user"):
         st.text_input("Username (required)", key="add_username")
         st.text_input("Password (required)", key="add_password")
@@ -130,8 +130,8 @@ def clear_upd_form():
     st.session_state["upd_su"] = False
     st.session_state["upd_notes"] = ""
 
-def _update_users(conn):
-    selected_df = _read_users(conn, context="update")
+def _update_record(conn):
+    selected_df = _view_records(conn, context="update")
     # st.dataframe(selected_df)
     if selected_df is not None:
         row = selected_df.to_dict()
@@ -156,8 +156,8 @@ def clear_del_form():
     st.session_state["del_username"] = ""
 
 
-def _delete_users(conn):
-    selected_df = _read_users(conn, context="delete")
+def _delete_record(conn):
+    selected_df = _view_records(conn, context="delete")
     if selected_df is not None:
         row = selected_df.to_dict()
         if row:
@@ -185,16 +185,23 @@ def _manage_db():
             # st.code(inspect.getsource(do_widget))
             st.code(f.read())            
 
-def _manage_users():
+def _manage_table():
 
-    # use option-menu
-    actions = list(action_dict.keys())
-    icons = [action_dict[i]["icon"] for i in actions]
-    action = option_menu(None, actions, 
-        icons=icons, 
-        menu_icon="cast", 
-        default_index=0, 
-        orientation="horizontal")
+    col1, col2 = st.columns([1,4])
+    with col1:
+        table_name = st.selectbox(
+            "Table:",
+            ["users"])
+
+    with col2:
+        # use option-menu
+        actions = list(action_dict.keys())
+        icons = [action_dict[i]["icon"] for i in actions]
+        action = option_menu(None, actions, 
+            icons=icons, 
+            menu_icon="cast", 
+            default_index=0, 
+            orientation="horizontal")
 
     # # horizontal radio buttons
     # # https://discuss.streamlit.io/t/horizontal-radio-buttons/2114/7
@@ -209,15 +216,15 @@ def _manage_users():
 # icons : https://icons.getbootstrap.com/
 
 meta_dict = {
-    "Table": {"fn": _manage_users, "icon": "file-spreadsheet"}, 
+    "Tables": {"fn": _manage_table, "icon": "file-spreadsheet"}, 
     "Database": {"fn": _manage_db, "icon": "box"}, 
 }
 
 action_dict =  {
-    "View": {"fn": _read_users, "icon": "list-task"}, 
-    "Add": {"fn": _create_users, "icon": "plus-square"},
-    "Update": {"fn": _update_users, "icon": "pencil-square"},
-    "Delete": {"fn": _delete_users, "icon": "shield-fill-x"},
+    "View": {"fn": _view_records, "icon": "list-task"}, 
+    "Add": {"fn": _create_record, "icon": "plus-square"},
+    "Update": {"fn": _update_record, "icon": "pencil-square"},
+    "Delete": {"fn": _delete_record, "icon": "shield-fill-x"},
 }
 
 
