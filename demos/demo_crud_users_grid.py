@@ -4,10 +4,21 @@ $ pip install streamlit streamlit-option-menu streamlit-aggrid
 - Bootstrap icons: 
     https://icons.getbootstrap.com/
 
-- This app is inspired by the following streamlit contributors, Thank you!
+- This app builds on the following streamlit contributions, Thank you!
     - streamlit-option-menu
     - streamlit-aggrid
-    - https://discuss.streamlit.io/t/authentication-script/14111
+
+
+## TODO
+
+- parse table schema to get column name/type and build form programmatically
+
+SELECT 
+    sql
+FROM 
+    sqlite_schema
+WHERE 
+    type ='table'
 
 """
 import streamlit as st
@@ -41,20 +52,22 @@ grid_dict = {
 def _hashit(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
-def get_records(conn, table_name="users", limit=10000):
-    select_sql = f"""
+def get_records(conn, table_name, limit=10000):
+    sql_stmt = f"""
         select * from {table_name} limit {limit}
     """
-    return pd.read_sql(select_sql, conn)
+    return pd.read_sql(sql_stmt, conn)
 
 ## Read
 def _view_records(conn, context="read"):
     # return selected_df
 
+    table_name = st.session_state["table_name"] if "table_name" in st.session_state else ""
+    if not table_name:
+        st.error("No table is selected!")
+    df = get_records(conn, table_name)
+
     enable_selection=True if context in ["update", "delete"] else False
-
-    df = get_records(conn)
-
     ## grid options
     gb = GridOptionsBuilder.from_dataframe(df)
     if enable_selection:
@@ -83,9 +96,24 @@ def _view_records(conn, context="read"):
     else:
         return None
 
+## Full-text Search
+def clear_find_form():
+    pass
+
+def _search_record(conn):
+    _view_records(conn, context="search")
+
+    with st.form(key="find_user"):
+        st.text_input("Phrase:", value="", key="find_phrase")
+        st.form_submit_button('Search', on_click=clear_find_form)
+
 ## Create
 def clear_add_form():
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
+    table_name = st.session_state["table_name"] if "table_name" in st.session_state else ""
+    if not table_name:
+        st.error("No table is selected!")
+
     with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
         user_ = st.session_state["add_username"]
         pass_ = st.session_state["add_password"]
@@ -93,7 +121,7 @@ def clear_add_form():
             su_ = st.session_state["add_su"]
             notes_ = st.session_state["add_notes"]
             conn.execute(
-                "INSERT INTO USERS(username, password, su, notes) VALUES(?,?,?,?)",
+                f"INSERT INTO {table_name} (username, password, su, notes) VALUES(?,?,?,?)",
                 (user_, _hashit(pass_), su_, notes_),
             )
 
@@ -116,13 +144,17 @@ def _create_record(conn):
 ## Update
 def clear_upd_form():
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
+    table_name = st.session_state["table_name"] if "table_name" in st.session_state else ""
+    if not table_name:
+        st.error("No table is selected!")
+
     with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
         username_ = st.session_state["upd_username"]
         pass_ = st.session_state["upd_password"]
         su_ = st.session_state["upd_su"]
         notes_ = st.session_state["upd_notes"]
         conn.execute(
-                "update users set password = ?,su = ?, notes = ? where username = ?", (_hashit(pass_),su_,notes_,username_)
+                f"update {table_name} set password = ?,su = ?, notes = ? where username = ?", (_hashit(pass_),su_,notes_,username_)
             )
 
     st.session_state["upd_username"] = ""
@@ -147,10 +179,14 @@ def _update_record(conn):
 ## Delete
 def clear_del_form():
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
+    table_name = st.session_state["table_name"] if "table_name" in st.session_state else ""
+    if not table_name:
+        st.error("No table is selected!")
+
     with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
         username_ = st.session_state["del_username"]
         conn.execute(
-                "delete from users where username = ?", (username_,)
+                f"delete from {table_name} where username = ?", (username_,)
             )
 
     st.session_state["del_username"] = ""
@@ -166,34 +202,36 @@ def _delete_record(conn):
                 st.form_submit_button('Delete', on_click=clear_del_form)
 
 
-def _manage_db():
-    create_table = """create table if not exists users (
-        id INTEGER PRIMARY KEY,
-        username UNIQUE ON CONFLICT REPLACE, 
-        password, 
-        su, 
-        notes
-    );"""
-    db_name = st.text_input('SQLite database name', value=_DB_NAME, key="db_name")
-    ddl_sql = st.text_area("DDL SQL", height=250, value=create_table, key="ddl_sql")
-    if st.button("Execute"):
-        with sql.connect(f"file:{db_name}?mode=rwc", uri=True) as conn:
-            conn.execute(ddl_sql)
-
-    with st.expander("Show code"):
-        with open(__file__) as f:
-            # st.code(inspect.getsource(do_widget))
-            st.code(f.read())            
+           
 
 def _manage_table():
+    db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
+    sql_stmt = """
+            SELECT 
+            name
+        FROM 
+            sqlite_schema
+        WHERE 
+            type ='table'
+            order by name
+    """
 
-    col1, col2 = st.columns([1,4])
+    tables = []
+    table_name = ""
+    col1, buf, col2  = st.columns([3,1,3])
     with col1:
-        table_name = st.selectbox(
-            "Table:",
-            ["users"])
+        db = st.text_input('SQLite database', value=db_name)
+        conn = sql.connect(f"file:{db}?mode=rw", uri=True)
+        df = pd.read_sql(sql_stmt, conn)
+        tables = df["name"].to_list()
 
     with col2:
+        table_name = st.selectbox("Table:", tables, key="table_name")
+
+    if not table_name:
+        st.error("No table is selected!")
+
+    else:
         # use option-menu
         actions = list(action_dict.keys())
         icons = [action_dict[i]["icon"] for i in actions]
@@ -203,17 +241,40 @@ def _manage_table():
             default_index=0, 
             orientation="horizontal")
 
-    # # horizontal radio buttons
-    # # https://discuss.streamlit.io/t/horizontal-radio-buttons/2114/7
-    # st.write('<style>div.row-widget.stRadio > div{flex-direction:row;justify-content: center;} </style>', unsafe_allow_html=True)
-    # st.write('<style>div.st-bf{flex-direction:column;} div.st-ag{font-weight:bold;padding-left:2px;}</style>', unsafe_allow_html=True)
-    # action = st.radio("Operation: ", action_dict.keys())
-    db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
-    with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
+        # # horizontal radio buttons
+        # # https://discuss.streamlit.io/t/horizontal-radio-buttons/2114/7
+        # st.write('<style>div.row-widget.stRadio > div{flex-direction:row;justify-content: center;} </style>', unsafe_allow_html=True)
+        # st.write('<style>div.st-bf{flex-direction:column;} div.st-ag{font-weight:bold;padding-left:2px;}</style>', unsafe_allow_html=True)
+        # action = st.radio("Operation: ", action_dict.keys())
+
         action_dict[action]["fn"](conn)
 
+def _manage_db():
+    create_table = """create table if not exists users (
+        id INTEGER PRIMARY KEY,
+        username UNIQUE ON CONFLICT REPLACE, 
+        password, 
+        su, 
+        notes
+    );"""
+    db_name = st.text_input('SQLite database', value=_DB_NAME, key="db_name")
+    sql_stmt = st.text_area("SQL commands", height=250, value=create_table, key="sql_stmt")
+    if st.button("Execute"):
+        with sql.connect(f"file:{db_name}?mode=rwc", uri=True) as conn:
+            if sql_stmt.strip().lower().startswith("select"):
+                df = pd.read_sql(sql_stmt, conn)
+                st.dataframe(df)
+            else:
+                res = conn.execute(sql_stmt)
+                st.write(res)
+    st.image("whitespace.png")
+    with st.expander("view code"):
+        with open(__file__) as f:
+            # st.code(inspect.getsource(do_widget))
+            st.code(f.read()) 
 
-# icons : https://icons.getbootstrap.com/
+
+
 
 meta_dict = {
     "Tables": {"fn": _manage_table, "icon": "file-spreadsheet"}, 
@@ -221,8 +282,9 @@ meta_dict = {
 }
 
 action_dict =  {
-    "View": {"fn": _view_records, "icon": "list-task"}, 
-    "Add": {"fn": _create_record, "icon": "plus-square"},
+    "View  ": {"fn": _view_records, "icon": "list-task"}, 
+    "Search": {"fn": _search_record, "icon": "search"},
+    "Create ": {"fn": _create_record, "icon": "plus-square"},
     "Update": {"fn": _update_record, "icon": "pencil-square"},
     "Delete": {"fn": _delete_record, "icon": "shield-fill-x"},
 }
@@ -236,8 +298,9 @@ if __name__ == "__main__":
             icons=icons, 
             menu_icon="columns-gap", 
             default_index=0)
+        st.image("whitespace.png")
 
-        if st.checkbox('view source'):
+        if st.checkbox('view code'):
             with open(__file__) as f:
                 st.code(f.read())
 
