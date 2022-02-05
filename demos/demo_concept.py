@@ -541,9 +541,30 @@ def do_learn():
     with st.expander("Show code"):
         st.code(inspect.getsource(do_learn))
 
+def lbs2kgs():
+    st.session_state.kgs = st.session_state.lbs / 2.2046
+
+def kgs2lbs():
+    st.session_state.lbs  = st.session_state.kgs * 2.2046
+
 def do_misc():
 
     st.header('Misc')
+
+    st.subheader("st.session_state")
+    st.write("Below is a lb / kg convertor:")
+    col1, buff, col2 = st.columns([2,1,2])
+    with col1:
+        pounds = st.number_input("Pounds:", key="lbs",
+            on_change=lbs2kgs)
+
+    with col2:
+        kgs = st.number_input("Kgs:", key="kgs",
+            on_change=kgs2lbs)
+
+    st.write("st.session_state is a global dictionary storing widget state")
+    st.write("watch a YouTube video to learn more:")
+    st.video("https://youtu.be/92jUAXBmZyU")
 
     st.subheader("st.echo")
     with st.echo():
