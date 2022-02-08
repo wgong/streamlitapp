@@ -11,7 +11,7 @@ $ pip install streamlit streamlit-option-menu streamlit-aggrid
 
 ## TODO
 
-- parse table schema to get column name/type and build form programmatically
+- parse table schema to get column name/type and build create/update form programmatically
 
 SELECT 
     sql
@@ -48,6 +48,13 @@ grid_dict = {
 
 
 }
+
+# @st.experimental_singleton
+# def sql_connect(db_name, mode="rw"):
+#     return sql.connect(f"file:{db_name}?mode={mode}", uri=True)
+#
+# will give this error:
+# ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 3484 and this is thread id 9876.
 
 def _hashit(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
@@ -221,6 +228,7 @@ def _manage_table():
     col1, buf, col2  = st.columns([3,1,3])
     with col1:
         db = st.text_input('SQLite database', value=db_name)
+
         conn = sql.connect(f"file:{db}?mode=rw", uri=True)
         df = pd.read_sql(sql_stmt, conn)
         tables = df["name"].to_list()
@@ -283,11 +291,16 @@ meta_dict = {
 
 action_dict =  {
     "View  ": {"fn": _view_records, "icon": "list-task"}, 
-    "Search": {"fn": _search_record, "icon": "search"},
+    # "Search": {"fn": _search_record, "icon": "search"},
     "Create ": {"fn": _create_record, "icon": "plus-square"},
     "Update": {"fn": _update_record, "icon": "pencil-square"},
     "Delete": {"fn": _delete_record, "icon": "shield-fill-x"},
 }
+# SQLite Full-text search requires creating separate virtual table
+# One may use trigger to populate the virtual table with data to search
+# Design virtual table such that : table_name, row_key, full_text
+# where full_text has this format: [col_name_1] col_value_1; ...; [col_name_N] col_value_N
+# From search page, one links search result to its source table
 
 
 if __name__ == "__main__":
