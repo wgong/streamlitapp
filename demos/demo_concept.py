@@ -547,10 +547,44 @@ def lbs2kgs():
 def kgs2lbs():
     st.session_state.lbs  = st.session_state.kgs * 2.2046
 
+def set_bg_img_url(url=None):
+    '''
+    A function to unpack an image from url and set as bg.
+    Returns
+    -------
+    The background.
+
+    How to use:
+        >>> img_url = "https://images.unsplash.com/photo-1444044205806-38f3ed106c10?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80"
+        >>> set_bg_img_url(url=img_url)
+    '''
+    if url:
+        st.markdown(f"""
+            <style>
+            .stApp {{
+                background: url({url});
+                background-size: cover
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+        
 def do_misc():
 
     st.header('Misc')
 
+    st.subheader("set background image")
+    with st.expander("Show code"):
+        st.code(inspect.getsource(set_bg_img_url))    
+
+    # img_url = "https://cdn.pixabay.com/photo/2020/06/19/22/33/wormhole-5319067_960_720.jpg"
+    # img_url = "https://images.unsplash.com/photo-1444044205806-38f3ed106c10?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80"
+    img_url = "https://images.unsplash.com/photo-1512273222628-4daea6e55abb?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80"
+    set_bg_img_url(url=img_url)
+
+    
+    
     st.subheader("st.session_state")
     st.write("Below is a lb / kg convertor:")
     col1, buff, col2 = st.columns([2,1,2])
