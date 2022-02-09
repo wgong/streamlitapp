@@ -45,6 +45,18 @@ data_st_tutorials = {
             "desc" : "Streamlit 101: An in-depth introduction - Airbnb NYC data"
         }
     },
+    "1littlecoder" : {
+        "title" : "Streamlit Tutorials by 1littlecoder",
+        "vid" : {
+            "url" : "https://www.youtube.com/watch?v=Iv2vt-7AYNQ&list=PLpdmBGJ6ELUI6Tws8BqVVNadsYOQlWGtw",
+            "desc" : "Streamlit Tutorials by 1littlecoder"
+        },
+        "src" : {
+            "url" : "https://github.com/amrrs/youtube-r-snippets/blob/master/streamlit_code_editor.py",
+            "desc" :"github/amrrs/youtube-r-snippets"
+        }
+    },
+
     "data_professor" : {
         "title" : "Streamlit Web App in Python by Data Professor",
         "vid" : {
@@ -80,35 +92,38 @@ data_st_tutorials = {
     }
 }
 
+##########################
+###  define helper functions with prefix "_"
+##########################
 
 # cache functions for performance
 @st.cache
-def convert_df2csv(df, index=True):
+def _convert_df2csv(df, index=True):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv(index=index).encode('utf-8')
 
 @st.cache
-def get_UN_data():
+def _get_UN_data():
     AWS_BUCKET_URL = "http://streamlit-demo-data.s3-us-west-2.amazonaws.com"
     df = pd.read_csv(AWS_BUCKET_URL + "/agri.csv.gz")
     return df.set_index("Region")
 
 @st.cache
-def from_data_file(filename):
+def _df_from_data_file(filename):
     url = (
         "http://raw.githubusercontent.com/streamlit/"
         "example-data/master/hello/v1/%s" % filename)
     return pd.read_json(url)
 
 @st.cache # 👈 below function will be cached
-def img_to_bytes(img_path):
+def _img_to_bytes(img_path):
     img_bytes = Path(img_path).read_bytes()
     encoded = base64.b64encode(img_bytes).decode()
     return encoded
 
 @st.cache # 👈 below function will be cached
-def fibonacci(n):
-    # Function for nth Fibonacci number
+def _fibonacci(n):
+    # Function for nth fibonacci number
 
     # Check if input is 0 then it will
     # print incorrect input
@@ -126,10 +141,44 @@ def fibonacci(n):
     elif n == 1 or n == 2:
         return 1
     else:
-        return fibonacci(n-1) + fibonacci(n-2)
+        return _fibonacci(n-1) + _fibonacci(n-2)
 
-# define event handlers 
-# prefix "do_" functions
+def _set_bg_img_url(url=None):
+    '''
+    A function to unpack an image from url and set as bg.
+    Returns
+    -------
+    The background.
+
+    How to use:
+        >>> img_url = "https://images.unsplash.com/photo-1444044205806-38f3ed106c10?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80"
+        >>> _set_bg_img_url(url=img_url)
+        
+    Soruce - https://discuss.streamlit.io/t/how-do-i-use-a-background-image-on-streamlit/5067/19?u=wgong27514
+    '''
+    if url:
+        st.markdown(f"""
+            <style>
+            .stApp {{
+                background: url({url});
+                background-size: cover
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+        
+def _set_bg_img():
+    menu_item = st.session_state.menu_item
+    if menu_item in menu_dict["concepts"].keys() and "img" in menu_dict["concepts"][menu_item]:
+        img_url = menu_dict["concepts"][menu_item]["img"]
+        _set_bg_img_url(url=img_url)
+
+
+##########################
+###  define event handlers with prefix "do_"
+##########################
+
 
 def do_data():
 
@@ -195,7 +244,7 @@ def do_data():
     st.subheader('st.download_button')
     st.download_button(
         label="Download dataframe as CSV",
-        data=convert_df2csv(chart_data, index=False),
+        data=_convert_df2csv(chart_data, index=False),
         file_name='df.csv',
         mime='text/csv',
     )
@@ -465,6 +514,7 @@ def do_widget():
 
 
 def do_layout():
+    _set_bg_img()
 
     ## UI Layout
     st.header('Layout')
@@ -489,19 +539,23 @@ def do_layout():
 
 
 def do_theme():
+    _set_bg_img()
 
     ## Theme
     st.header('Theme')
     with st.expander("Show code"):
         st.code(inspect.getsource(do_theme))
 
+
+
 def do_cache():
+    _set_bg_img()
     
     ## Caching
     st.header('Caching')
     num = st.slider("num", 1, 100, 5)
     ts_start = time.time()
-    fib_num = fibonacci(num)
+    fib_num = _fibonacci(num)
     ts_duration = time.time() - ts_start
     st.write(f"Fib({num}) = {fib_num} \n calculated in {ts_duration:.3f} sec")
     st.button("Re-Run")
@@ -541,62 +595,32 @@ def do_learn():
     with st.expander("Show code"):
         st.code(inspect.getsource(do_learn))
 
-def lbs2kgs():
+def _lbs2kgs():
     st.session_state.kgs = st.session_state.lbs / 2.2046
 
-def kgs2lbs():
+def _kgs2lbs():
     st.session_state.lbs  = st.session_state.kgs * 2.2046
 
-def set_bg_img_url(url=None):
-    '''
-    A function to unpack an image from url and set as bg.
-    Returns
-    -------
-    The background.
-
-    How to use:
-        >>> img_url = "https://images.unsplash.com/photo-1444044205806-38f3ed106c10?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80"
-        >>> set_bg_img_url(url=img_url)
-        
-    Soruce - https://discuss.streamlit.io/t/how-do-i-use-a-background-image-on-streamlit/5067/19?u=wgong27514
-    '''
-    if url:
-        st.markdown(f"""
-            <style>
-            .stApp {{
-                background: url({url});
-                background-size: cover
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-        
 def do_misc():
+    _set_bg_img()
 
     st.header('Misc')
 
     st.subheader("set background image")
     with st.expander("Show code"):
-        st.code(inspect.getsource(set_bg_img_url))    
+        st.code(inspect.getsource(_set_bg_img_url))    
 
-    # img_url = "https://cdn.pixabay.com/photo/2020/06/19/22/33/wormhole-5319067_960_720.jpg"
-    # img_url = "https://images.unsplash.com/photo-1444044205806-38f3ed106c10?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80"
-    img_url = "https://images.unsplash.com/photo-1512273222628-4daea6e55abb?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80"
-    set_bg_img_url(url=img_url)
-
-    
     
     st.subheader("st.session_state")
     st.write("Below is a lb / kg convertor:")
     col1, buff, col2 = st.columns([2,1,2])
     with col1:
         pounds = st.number_input("Pounds:", key="lbs",
-            on_change=lbs2kgs)
+            on_change=_lbs2kgs)
 
     with col2:
         kgs = st.number_input("Kgs:", key="kgs",
-            on_change=kgs2lbs)
+            on_change=_kgs2lbs)
 
     st.write("st.session_state is a global dictionary storing widget state")
     st.write("watch a YouTube video to learn more:")
@@ -723,7 +747,7 @@ def do_mapping():
         ALL_LAYERS = {
             "Bike Rentals": pdk.Layer(
                 "HexagonLayer",
-                data=from_data_file("bike_rental_stats.json"),
+                data=_df_from_data_file("bike_rental_stats.json"),
                 get_position=["lon", "lat"],
                 radius=200,
                 elevation_scale=4,
@@ -732,7 +756,7 @@ def do_mapping():
             ),
             "Bart Stop Exits": pdk.Layer(
                 "ScatterplotLayer",
-                data=from_data_file("bart_stop_stats.json"),
+                data=_df_from_data_file("bart_stop_stats.json"),
                 get_position=["lon", "lat"],
                 get_color=[200, 30, 0, 160],
                 get_radius="[exits]",
@@ -740,7 +764,7 @@ def do_mapping():
             ),
             "Bart Stop Names": pdk.Layer(
                 "TextLayer",
-                data=from_data_file("bart_stop_stats.json"),
+                data=_df_from_data_file("bart_stop_stats.json"),
                 get_position=["lon", "lat"],
                 get_text="name",
                 get_color=[0, 0, 0, 200],
@@ -749,7 +773,7 @@ def do_mapping():
             ),
             "Outbound Flow": pdk.Layer(
                 "ArcLayer",
-                data=from_data_file("bart_path_stats.json"),
+                data=_df_from_data_file("bart_path_stats.json"),
                 get_source_position=["lon", "lat"],
                 get_target_position=["lon2", "lat2"],
                 get_source_color=[200, 30, 0, 160],
@@ -793,7 +817,7 @@ def do_dataframe():
     """, unsafe_allow_html=True)
 
     try:
-        df = get_UN_data()
+        df = _get_UN_data()
         countries = st.multiselect(
             "Choose countries", list(df.index), ["China", "United States of America"]
         )
@@ -838,23 +862,25 @@ def do_nothing():
 # menu_item to handler mapping
 menu_dict = {
     "demos" : {
-        "Animation": do_animation,
-        "Plotting": do_plotting,
-        "Mapping": do_mapping,
-        "Dataframe": do_dataframe
+        "Animation": {"fn": do_animation, },
+        "Plotting": {"fn": do_plotting},
+        "Mapping": {"fn": do_mapping, },
+        "Dataframe":  {"fn": do_dataframe},
     },
     "concepts" : {
-            "Data": do_data,
-            "Cache": do_cache,
-            "Chart": do_chart,
-            "Media": do_media,
-            "Widget": do_widget,
-            "Layout": do_layout,
-            "Theme": do_theme,
-            "Learn": do_learn,
-            "Misc": do_misc
+            "Data": {"fn": do_data, },
+            "Cache": {"fn": do_cache, "img": "https://www.blueskyamusements.com/images/site/template/bkg-sky.jpg"},
+            "Chart": {"fn": do_chart, },
+            "Media": {"fn": do_media, },
+            "Widget": {"fn": do_widget, },
+            "Layout": {"fn": do_layout, "img": "https://i.pinimg.com/originals/62/54/49/6254491a98878eaa3a3c5dd6f38d3788.jpg"},
+            "Theme": {"fn": do_theme, "img": "https://cdn.pixabay.com/photo/2020/06/19/22/33/wormhole-5319067_960_720.jpg"},
+            "Learn":{"fn": do_learn},
+            "Misc": {"fn": do_misc, "img": "https://images.unsplash.com/photo-1512273222628-4daea6e55abb?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80"},
     }
 }
+
+# img_url = "https://images.unsplash.com/photo-1444044205806-38f3ed106c10?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80"
 
 
 # body
@@ -863,10 +889,10 @@ def do_body():
     demo_item = st.session_state.demo_item
 
     if demo_item in menu_dict["demos"].keys():
-        menu_dict["demos"][demo_item]()
+        menu_dict["demos"][demo_item]["fn"]()
     else:
         if menu_item in menu_dict["concepts"].keys():
-            menu_dict["concepts"][menu_item]()
+            menu_dict["concepts"][menu_item]["fn"]()
 
     if st.sidebar.checkbox('Complete code'):
         with open(__file__) as f:
