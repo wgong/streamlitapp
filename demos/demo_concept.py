@@ -557,6 +557,8 @@ def set_bg_img_url(url=None):
     How to use:
         >>> img_url = "https://images.unsplash.com/photo-1444044205806-38f3ed106c10?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80"
         >>> set_bg_img_url(url=img_url)
+        
+    Soruce - https://discuss.streamlit.io/t/how-do-i-use-a-background-image-on-streamlit/5067/19?u=wgong27514
     '''
     if url:
         st.markdown(f"""
