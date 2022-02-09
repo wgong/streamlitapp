@@ -550,15 +550,25 @@ def do_theme():
 
 def do_cache():
     _set_bg_img()
-    
+
     ## Caching
     st.header('Caching')
-    num = st.slider("num", 1, 100, 5)
-    ts_start = time.time()
-    fib_num = _fibonacci(num)
-    ts_duration = time.time() - ts_start
-    st.write(f"Fib({num}) = {fib_num} \n calculated in {ts_duration:.3f} sec")
-    st.button("Re-Run")
+    max_num = st.number_input("Set max number of the slider", value=100)
+    if max_num:
+        if int(max_num) > 300:
+            st.warning(f"Your number {int(max_num)} is too big, let us keep it to 300")
+            MAX_NUM = 300
+        else:
+            MAX_NUM = int(max_num)
+        num = st.slider("num", 1, MAX_NUM, 5)
+        ts_start = time.time()
+        with st.spinner("Calculating ..."):
+            fib_num = _fibonacci(num)
+        st.balloons()
+
+        ts_duration = time.time() - ts_start
+        st.write(f"Fib({num}) = {fib_num} \n calculated in {ts_duration:.3f} sec")
+        st.button("Re-Run")
 
     st.markdown("""##### Note:
     - calculating Fib of the same number takes much smaller constant time
