@@ -18,4 +18,10 @@ $ streamlit hello
 
 https://share.streamlit.io/wgong/streamlitapp/main/demos/demo_concept.py
 
+## Other examples
+
+### Streamlit eBook
+
+https://github.com/sebastiandres/streamlit_book
+
 

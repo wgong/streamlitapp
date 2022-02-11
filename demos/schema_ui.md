@@ -104,3 +104,60 @@ Status/control
         stop
 
 session_state (global dict)
+
+performance
+
+        st.cache(ttl=3600)
+        st.experimental_memo
+        st.experimental_singleton
+
+
+Example schema:
+
+```
+Tasks:
+    id
+    name
+    description
+    category
+    due_date
+    priority
+    completion_pct
+    related_tasks
+    related_persons
+    attachments
+    created_by
+    created_at
+    modified_by
+    modified_at
+
+Journal:
+    id
+    name
+    description
+    category
+    attachments
+
+Events:
+    id
+    name
+    description
+    category
+    when
+    where
+    related_persons
+    attachments
+
+Persons:
+    id
+    first_name
+    mid_name
+    last_name
+    email
+    phone
+    address
+    description
+    related_persons
+    attachments
+
+```
