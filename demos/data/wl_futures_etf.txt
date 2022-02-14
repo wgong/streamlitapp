@@ -1,0 +1,44 @@
+DIA Dow 30; Equity Index
+SPY S&P 500; Equity Index
+QQQ Nasdaq 100; Equity Index
+IWM Russell 2000; Equity Index
+GSG iShares S&P GSCI Commodity-Indexed Trust; Commodity
+DBC Invesco DB Commodity Index Tracking Fund; Commodity
+USO United States Oil Fund LP; Energy
+UNG United States Natural Gas Fund LP; Energy
+BOIL	ProShares Ultra Bloomberg Natural Gas; Energy
+DBA	Invesco DB Agriculture Fund; Agri
+MOO VanEck Vectors Agribusiness; Agri
+DBO	Invesco DB Oil Fund; Energy
+BNO	United States Brent Oil Fund LP; Energy
+GRN	iPath Series B Carbon ETN; Energy-Clean
+ICLN iShares Global Clean Energy; Energy-Clean
+CORN	Teucrium Corn Fund; Agri
+WEAT	Teucrium Wheat Fund; Agri
+COW	iPath Bloomberg Livestock; Agri
+SMH Semiconductor Index; Technology
+VGT Vanguard IT; Technology
+WOOD iShares Global Timber & Forestry; Agri
+JO  iPath  Bloomberg Coffee Subindex; Agri
+RJA  Elements Agriculture ; Agri
+GLD  Gold; Metal
+SLV	  Silver; Metal
+GDX Gold miner; Metal
+SILJ Silver miner; Metal
+COPX  Copper Fund; Metal
+URA  Global X Uranium; Metal
+PALL Palladium; Metal
+UUP US Dollar; Currency
+UDN US Dollar - Short; Currency
+BITO  ProShares Bitcoin Strategy; Currency
+XLC Communication Services; Sector Fund
+XLY Consumer Discretionary; Sector Fund
+XLP Consumer Staples; Sector Fund
+XLE Energy; Sector Fund
+XLF Financials; Sector Fund
+XLV Health-care; Sector Fund
+XLI Industrials; Sector Fund
+XLB Materials ; Sector Fund
+XLK   Technology; Sector Fund
+XLU   Utilities; Sector Fund
+XLRE   Real Estate; Sector Fund
