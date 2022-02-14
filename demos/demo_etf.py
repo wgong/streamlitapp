@@ -18,10 +18,22 @@ for sect in sectors:
 period_dict = {"daily":"d", "weekly":"w", "monthly":"m"}
 
 sect_dict = {}
+
+def reset_sector():
+    for sect in sectors:
+        if sect == 'Equity Index':
+            sect_dict[sect] = st.sidebar.checkbox(sect, value=True, key=sect)
+        else:
+            sect_dict[sect] = st.sidebar.checkbox(sect, key=sect)
 ## sidebar Menu
 def do_sidebar():
-    for sect in sectors:
-        sect_dict[sect] = st.sidebar.checkbox(sect)
+    reset_sector()
+
+    ## not working due to this error: StreamlitAPIException: st.session_state.Agri cannot be modified after the widget with key Agri is instantiated
+    # if st.sidebar.button("Reset"):
+    #     for sect in sectors:
+    #         if sect in st.session_state and st.session_state[sect] and sect != 'Equity Index':
+    #             st.session_state[sect] = False
 
 # body
 def do_body():
@@ -46,6 +58,7 @@ def do_body():
             for k,v in etf_dict[sect].items():
                 st.markdown(f"[{k}](https://finviz.com/quote.ashx?t={k}&p={period}) : {v}")
                 st.image(f"https://finviz.com/chart.ashx?t={k}&p={period}")
+                # don't know how to get futures chart img
 
     if show_df:
         st.dataframe(df)
