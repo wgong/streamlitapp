@@ -341,16 +341,10 @@ def reset_sector():
             sect_dict[sect] = st.sidebar.checkbox(sect, value=True, key=sect)
         else:
             sect_dict[sect] = st.sidebar.checkbox(sect, key=sect)
+
 ## sidebar Menu
 def do_sidebar():
     reset_sector()
-
-    ## not working due to this error: StreamlitAPIException: st.session_state.Agri cannot be modified after the widget with key Agri is instantiated
-    # if st.sidebar.button("Reset"):
-    #     for sect in sectors:
-    #         if sect in st.session_state and st.session_state[sect] and sect != 'Equity Index':
-    #             st.session_state[sect] = False
-
     with st.sidebar:
         st.selectbox('Period:', list(period_dict.keys()), index=0, key="period")
         st.checkbox("Show Charts", value=True, key="show_chart")
@@ -358,20 +352,6 @@ def do_sidebar():
 
 # body
 def do_body():
-
-    # col0, col1, col2, col3 = st.columns(4)
-
-    # with col0:
-    #     show_chart = st.checkbox("Show Charts", value=True, key="show_chart")
-
-    # with col1:
-    #     period_item = st.selectbox(
-    #         'Period:', list(period_dict.keys()), index=0, key="period")
-    #     period = period_dict[period_item]
-
-    # with col3:
-    #     show_df = st.checkbox("Show ETF data", key="show_etf")
-
 
     if st.session_state.get("show_etf", False):
         st.dataframe(df)
