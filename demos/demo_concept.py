@@ -45,15 +45,15 @@ data_st_tutorials = {
             "desc" : "Streamlit 101: An in-depth introduction - Airbnb NYC data"
         }
     },
-    "1littlecoder" : {
-        "title" : "Streamlit Tutorials by 1littlecoder",
-        "vid" : {
-            "url" : "https://www.youtube.com/watch?v=Iv2vt-7AYNQ&list=PLpdmBGJ6ELUI6Tws8BqVVNadsYOQlWGtw",
-            "desc" : "Streamlit Tutorials by 1littlecoder"
+    "marc_madsen" : {
+        "title" : "Awesome-streamlit resources and gallery by Marc",
+        "app" : {
+            "url" : "https://awesome-streamlit.azurewebsites.net/",
+            "desc" : "Awesome-streamlit"
         },
         "src" : {
-            "url" : "https://github.com/amrrs/youtube-r-snippets/blob/master/streamlit_code_editor.py",
-            "desc" :"github/amrrs/youtube-r-snippets"
+            "url" : "https://github.com/MarcSkovMadsen/awesome-streamlit",
+            "desc" :"github/MarcSkovMadsen/awesome-streamlit"
         }
     },
 
@@ -89,7 +89,18 @@ data_st_tutorials = {
             "url" : "https://github.com/hackingthemarkets/streamlit-dashboards.git",
             "desc" :"github/hackingthemarkets/streamlit-dashboards"
         }
-    }
+    },
+    "1littlecoder" : {
+        "title" : "Streamlit Tutorials by 1littlecoder",
+        "vid" : {
+            "url" : "https://www.youtube.com/watch?v=Iv2vt-7AYNQ&list=PLpdmBGJ6ELUI6Tws8BqVVNadsYOQlWGtw",
+            "desc" : "Streamlit Tutorials by 1littlecoder"
+        },
+        "src" : {
+            "url" : "https://github.com/amrrs/youtube-r-snippets/blob/master/streamlit_code_editor.py",
+            "desc" :"github/amrrs/youtube-r-snippets"
+        }
+    },
 }
 
 ##########################
@@ -601,6 +612,11 @@ def do_learn():
             st.markdown(f"""
             - [{st_data["blog"]["desc"]}]({st_data["blog"]["url"]})
             """)
+        if "app" in st_data:
+            # display app
+            st.markdown(f"""
+            - [{st_data["app"]["desc"]}]({st_data["app"]["url"]})
+            """)
     
     with st.expander("Show code"):
         st.code(inspect.getsource(do_learn))
@@ -924,16 +940,16 @@ def do_sidebar():
     st.sidebar.markdown("[__Concepts__](https://docs.streamlit.io/library/get-started/main-concepts)")
     menu_options = sorted(list(menu_dict["concepts"].keys()))
     default_ix = menu_options.index("Chart")
-    menu_item = st.sidebar.selectbox("Explore: ", menu_options, index=default_ix, key="menu_item")
+    menu_item = st.sidebar.selectbox("Explore:", menu_options, index=default_ix, key="menu_item")
     st.sidebar.markdown("""
     <small>Since Streamlit runs script from top to bottom, we use menu-item to split
     the whole script into sections, so only a selected section is rerun
     </small>""", unsafe_allow_html=True)
 
-    st.sidebar.markdown("__Demos__")
+    # st.sidebar.markdown("__Demos__")
     demo_options = ["_____"] + list(menu_dict["demos"].keys())
     demo_ix = demo_options.index("_____")
-    demo_item = st.sidebar.selectbox("Pick a demo: ", demo_options, index=demo_ix, key="demo_item")
+    demo_item = st.sidebar.selectbox("Play demo: ", demo_options, index=demo_ix, key="demo_item")
     st.sidebar.markdown("""
     <small>Streamlit built-in demos (unpick to explore concept)
     </small>""", unsafe_allow_html=True)
@@ -947,7 +963,9 @@ def do_sidebar():
     - [Components](https://docs.streamlit.io/library/components)
     - [Gallery](https://streamlit.io/gallery)
     - [Community](https://discuss.streamlit.io/)
+    - [Awesome-streamlit](https://awesome-streamlit.azurewebsites.net/)
     """)
+
 
     if st.sidebar.checkbox('Code for sidebar', key="do_sidebar"):
         st.sidebar.code(inspect.getsource(do_sidebar))
