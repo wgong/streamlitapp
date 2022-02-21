@@ -2,3 +2,4 @@ streamlit
 streamlit-aggrid
 streamlit-option-menu
 streamlit_book
+htbuilder
