@@ -295,9 +295,12 @@ def do_data():
 
 
 def do_chart():
-    df = pd.DataFrame(
-        np.random.randn(20, 3),
-        columns=['a', 'b', 'c'])
+    with st.echo():
+        df = pd.DataFrame(
+            [[np.sin(i), np.cos(i), 1.5*np.sin(3*i)] 
+                for i in np.arange(0,4*np.pi,0.1)],
+            columns=['sin(x)', 'cos(x)', '1.5sin(3x)'])
+
 
     st.subheader('st.line_chart')
     st.line_chart(df)    
@@ -305,8 +308,13 @@ def do_chart():
     st.subheader('st.area_chart')
     st.area_chart(df)    
 
+    with st.echo():
+        df2 = pd.DataFrame(
+            np.random.randn(20, 3),
+            columns=['a', 'b', 'c'])    
+
     st.subheader('st.bar_chart')  # not easy for unstack bar
-    st.bar_chart(df)   
+    st.bar_chart(df2)   
 
     if False:  # disable - error in streamlit cloud
         st.subheader('st.pyplot') 
@@ -316,7 +324,7 @@ def do_chart():
         st.pyplot(fig)
 
     st.subheader('st.altair_chart') 
-    c = alt.Chart(df).mark_circle().encode(
+    c = alt.Chart(df2).mark_circle().encode(
         x='a', y='b', size='c', color='c', tooltip=['a', 'b', 'c'])
     st.altair_chart(c, use_container_width=True)
 

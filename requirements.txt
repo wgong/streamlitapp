@@ -1,5 +1,6 @@
 streamlit
 streamlit-aggrid
 streamlit-option-menu
+streamlit-player
 streamlit_book
 htbuilder
