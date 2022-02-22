@@ -30,29 +30,11 @@ import sqlite3 as sql
 import hashlib
 import pandas as pd
 
-_DB_NAME = "users.db"
-
-_select_table_name_stmt = """
-        SELECT 
-        name
-    FROM 
-        sqlite_schema
-    WHERE 
-        type ='table'
-        order by name
-"""
-
-_create_table_stmt = """create table if not exists users (
-    id INTEGER PRIMARY KEY,
-    username UNIQUE ON CONFLICT REPLACE, 
-    password, 
-    su, 
-    notes
-);"""
+_DB_NAME = "journals.db"
 
 # Aggrid options
 grid_dict = {
-    "grid_height": 250,
+    "grid_height": 300,
     "return_mode_value": DataReturnMode.__members__["FILTERED"],
     "update_mode_value": GridUpdateMode.__members__["MODEL_CHANGED"],
     "fit_columns_on_grid_load": True,
@@ -62,7 +44,7 @@ grid_dict = {
     "groupSelectsChildren": True,
     "groupSelectsFiltered": True,
     "enable_pagination": True,
-    "paginationPageSize": 6,
+    "paginationPageSize": 8,
 
 
 }
@@ -77,20 +59,20 @@ grid_dict = {
 def _hashit(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
-def get_records(conn, table_name, limit=10000):
+def _get_records(conn, table_name, limit=10000):
     sql_stmt = f"""
         select * from {table_name} limit {limit}
     """
     return pd.read_sql(sql_stmt, conn)
 
 ## Read
-def _view_records(conn, context="read"):
+def _view_records(conn, table_name, context="read"):
     # return selected_df
 
     table_name = st.session_state["table_name"] if "table_name" in st.session_state else ""
     if not table_name:
         st.error("No table is selected!")
-    df = get_records(conn, table_name)
+    df = _get_records(conn, table_name)
 
     enable_selection=True if context in ["update", "delete"] else False
     ## grid options
@@ -122,18 +104,18 @@ def _view_records(conn, context="read"):
         return None
 
 ## Full-text Search
-def clear_find_form():
+def _clear_find_form():
     pass
 
-def _search_record(conn):
-    _view_records(conn, context="search")
+def _search_record(conn, table_name):
+    _view_records(conn, table_name, context="search")
 
     with st.form(key="find_user"):
         st.text_input("Phrase:", value="", key="find_phrase")
-        st.form_submit_button('Search', on_click=clear_find_form)
+        st.form_submit_button('Search', on_click=_clear_find_form)
 
 ## Create
-def clear_add_form():
+def _clear_add_form():
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
     table_name = st.session_state["table_name"] if "table_name" in st.session_state else ""
     if not table_name:
@@ -155,19 +137,19 @@ def clear_add_form():
     st.session_state["add_su"] = False
     st.session_state["add_notes"] = ""
 
-def _create_record(conn):
+def _create_record(conn, table_name):
 
-    _view_records(conn, context="create")
+    _view_records(conn, table_name, context="create")
     with st.form(key="add_user"):
         st.text_input("Username (required)", key="add_username")
         st.text_input("Password (required)", key="add_password")
         st.checkbox("Is a superuser?", value=False, key="add_su")
         st.text_area('Notes', key="add_notes")
-        st.form_submit_button('Add', on_click=clear_add_form)
+        st.form_submit_button('Add', on_click=_clear_add_form)
      
 
 ## Update
-def clear_upd_form():
+def _clear_upd_form():
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
     table_name = st.session_state["table_name"] if "table_name" in st.session_state else ""
     if not table_name:
@@ -187,8 +169,8 @@ def clear_upd_form():
     st.session_state["upd_su"] = False
     st.session_state["upd_notes"] = ""
 
-def _update_record(conn):
-    selected_df = _view_records(conn, context="update")
+def _update_record(conn, table_name):
+    selected_df = _view_records(conn, table_name, context="update")
     # st.dataframe(selected_df)
     if selected_df is not None:
         row = selected_df.to_dict()
@@ -198,11 +180,11 @@ def _update_record(conn):
                 st.text_input("Password:", value=row["password"][0], key="upd_password")
                 st.checkbox("Is superuser?", value=row["su"][0], key="upd_su")
                 st.text_area('Notes', value=row["notes"][0], key="upd_notes")
-                st.form_submit_button('Update', on_click=clear_upd_form)
+                st.form_submit_button('Update', on_click=_clear_upd_form)
 
 
 ## Delete
-def clear_del_form():
+def _clear_del_form():
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
     table_name = st.session_state["table_name"] if "table_name" in st.session_state else ""
     if not table_name:
@@ -217,25 +199,47 @@ def clear_del_form():
     st.session_state["del_username"] = ""
 
 
-def _delete_record(conn):
-    selected_df = _view_records(conn, context="delete")
+def _delete_record(conn, table_name):
+    selected_df = _view_records(conn, table_name, context="delete")
     if selected_df is not None:
         row = selected_df.to_dict()
         if row:
             with st.form(key="del_user"):
                 st.text_input("Username:", value=row["username"][0], key="del_username")
-                st.form_submit_button('Delete', on_click=clear_del_form)
+                st.form_submit_button('Delete', on_click=_clear_del_form)
 
+
+           
 
 def _manage_table():
-    # # horizontal radio buttons
-    # # https://discuss.streamlit.io/t/horizontal-radio-buttons/2114/7
-    # st.write('<style>div.row-widget.stRadio > div{flex-direction:row;justify-content: center;} </style>', unsafe_allow_html=True)
-    # st.write('<style>div.st-bf{flex-direction:column;} div.st-ag{font-weight:bold;padding-left:2px;}</style>', unsafe_allow_html=True)
-    # action = st.radio("Operation: ", action_dict.keys())
-
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
-    with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
+    sql_stmt = """
+            SELECT 
+            name
+        FROM 
+            sqlite_schema
+        WHERE 
+            type ='table'
+            order by name
+    """
+
+    tables = []
+    table_name = ""
+    col1, buf, col2  = st.columns([3,1,3])
+    with col1:
+        db = st.text_input('SQLite database', value=db_name)
+
+        conn = sql.connect(f"file:{db}?mode=rw", uri=True)
+        df = pd.read_sql(sql_stmt, conn)
+        tables = df["name"].to_list()
+
+    with col2:
+        table_name = st.selectbox("Table:", tables, key="table_name")
+
+    if not table_name:
+        st.error("No table is selected!")
+
+    else:
         # use option-menu
         actions = list(action_dict.keys())
         icons = [action_dict[i]["icon"] for i in actions]
@@ -243,13 +247,26 @@ def _manage_table():
             icons=icons, 
             menu_icon="cast", 
             default_index=0, 
-            orientation="horizontal")        
-        action_dict[action]["fn"](conn)
+            orientation="horizontal")
+
+        # # horizontal radio buttons
+        # # https://discuss.streamlit.io/t/horizontal-radio-buttons/2114/7
+        # st.write('<style>div.row-widget.stRadio > div{flex-direction:row;justify-content: center;} </style>', unsafe_allow_html=True)
+        # st.write('<style>div.st-bf{flex-direction:column;} div.st-ag{font-weight:bold;padding-left:2px;}</style>', unsafe_allow_html=True)
+        # action = st.radio("Operation: ", action_dict.keys())
+
+        action_dict[action]["fn"](conn, table_name)
 
 def _manage_db():
-
-    db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
-    sql_stmt = st.text_area("SQL commands", height=250, value=_create_table_stmt, key="sql_stmt")
+    create_table = """create table if not exists users (
+        id INTEGER PRIMARY KEY,
+        username UNIQUE ON CONFLICT REPLACE, 
+        password, 
+        su, 
+        notes
+    );"""
+    db_name = st.text_input('SQLite database', value=_DB_NAME, key="db_name")
+    sql_stmt = st.text_area("SQL commands", height=250, value=create_table, key="sql_stmt")
     if st.button("Execute"):
         with sql.connect(f"file:{db_name}?mode=rwc", uri=True) as conn:
             if sql_stmt.strip().lower().startswith("select"):
@@ -258,26 +275,25 @@ def _manage_db():
             else:
                 res = conn.execute(sql_stmt)
                 st.write(res)
-    if False:                
-        st.image("background_body.png")
-        with st.expander("view code"):
-            with open(__file__) as f:
-                # st.code(inspect.getsource(do_widget))
-                st.code(f.read()) 
+    st.image("whitespace.png")
+    with st.expander("view code"):
+        with open(__file__) as f:
+            # st.code(inspect.getsource(do_widget))
+            st.code(f.read()) 
 
 
 
 
 meta_dict = {
-    "Database": {"fn": _manage_db, "icon": "box"}, 
     "Tables": {"fn": _manage_table, "icon": "file-spreadsheet"}, 
+    "Database": {"fn": _manage_db, "icon": "box"}, 
 }
 
 action_dict =  {
-    "View": {"fn": _view_records, "icon": "list-task"}, 
+    "View  ": {"fn": _view_records, "icon": "list-task"}, 
     # "Search": {"fn": _search_record, "icon": "search"},
-    "Add": {"fn": _create_record, "icon": "plus-square"},
-    "Edit": {"fn": _update_record, "icon": "pencil-square"},
+    "Create ": {"fn": _create_record, "icon": "plus-square"},
+    "Update": {"fn": _update_record, "icon": "pencil-square"},
     "Delete": {"fn": _delete_record, "icon": "shield-fill-x"},
 }
 # SQLite Full-text search requires creating separate virtual table
@@ -287,43 +303,19 @@ action_dict =  {
 # From search page, one links search result to its source table
 
 
-
-def do_sidebar():
+if __name__ == "__main__":
     objects = list(meta_dict.keys())
     icons = [meta_dict[i]["icon"] for i in objects]
     with st.sidebar:
         action = option_menu("Manage", objects, 
             icons=icons, 
             menu_icon="columns-gap", 
-            default_index=objects.index("Tables"),
-            key="menu_action")
-        # st.sidebar.write(f"action={action}")
-
-
-        c1, c2 = st.columns([1,4])
-        with c1:
-            pass
-        with c2:
-
-            db_name = st.text_input('SQLite database', value=_DB_NAME, key="db_name")    
-            if action == "Tables":            
-                conn = sql.connect(f"file:{db_name}?mode=rw", uri=True)
-                df = pd.read_sql(_select_table_name_stmt, conn)
-                table_name = st.selectbox("Table:", df["name"].to_list(), key="table_name")
-
-
-        st.image("background_sidebar.png")
+            default_index=0)
+        st.image("whitespace.png")
 
         if st.checkbox('view code'):
             with open(__file__) as f:
                 st.code(f.read())
 
-
-def do_body():
-    action = st.session_state["menu_action"] if "menu_action" in st.session_state else "Tables"
     if action:
         meta_dict[action]["fn"]()
-
-if __name__ == "__main__":
-    do_sidebar()
-    do_body()
