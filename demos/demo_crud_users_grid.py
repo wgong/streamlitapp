@@ -30,7 +30,20 @@ import sqlite3 as sql
 import hashlib
 import pandas as pd
 
+_DEBUG_ = False # True
+
+def _log_msg(msg):
+    if _DEBUG_:
+        st.info(msg)
+
 _DB_NAME = "users.db"
+
+# Initial page config
+st.set_page_config(
+     page_title='Streamlit DB CRUD Demo',
+     layout="wide",
+     initial_sidebar_state="expanded",
+)
 
 _select_table_name_stmt = """
         SELECT 
@@ -77,23 +90,18 @@ grid_dict = {
 def _hashit(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
-def get_records(conn, table_name, limit=10000):
+def _get_records(conn, table_name, limit=10000):
     sql_stmt = f"""
         select * from {table_name} limit {limit}
     """
     return pd.read_sql(sql_stmt, conn)
 
-## Read
-def _view_records(conn, context="read"):
-    # return selected_df
 
-    table_name = st.session_state["table_name"] if "table_name" in st.session_state else ""
-    if not table_name:
-        st.error("No table is selected!")
-    df = get_records(conn, table_name)
+def _prepare_grid(conn, table_name, context=None):
+    enable_selection=True if context in ["read", "update", "delete"] else False
 
-    enable_selection=True if context in ["update", "delete"] else False
     ## grid options
+    df = _get_records(conn, table_name)
     gb = GridOptionsBuilder.from_dataframe(df)
     if enable_selection:
         gb.configure_selection(grid_dict["selection_mode"],
@@ -125,12 +133,25 @@ def _view_records(conn, context="read"):
 def clear_find_form():
     pass
 
-def _search_record(conn):
-    _view_records(conn, context="search")
+def _search_record(conn, table_name):
+    _prepare_grid(conn, table_name, context="search")
 
     with st.form(key="find_user"):
         st.text_input("Phrase:", value="", key="find_phrase")
         st.form_submit_button('Search', on_click=clear_find_form)
+
+## Read
+def _read_record(conn, table_name):
+    selected_df = _prepare_grid(conn, table_name, context="read")
+    if selected_df is not None:
+        row = selected_df.to_dict()
+        if row:
+            st.write(f'id: {row["id"][0]}')
+            st.text_input("Username:", value=row["username"][0], key="show_username")
+            st.text_input("Password:", value=row["password"][0], key="show_password")
+            st.checkbox("Is superuser?", value=row["su"][0], key="show_su")
+            st.text_area('Notes', value=row["notes"][0], key="show_notes")
+
 
 ## Create
 def clear_add_form():
@@ -155,9 +176,9 @@ def clear_add_form():
     st.session_state["add_su"] = False
     st.session_state["add_notes"] = ""
 
-def _create_record(conn):
+def _create_record(conn, table_name):
 
-    _view_records(conn, context="create")
+    _prepare_grid(conn, table_name, context="create")
     with st.form(key="add_user"):
         st.text_input("Username (required)", key="add_username")
         st.text_input("Password (required)", key="add_password")
@@ -187,18 +208,20 @@ def clear_upd_form():
     st.session_state["upd_su"] = False
     st.session_state["upd_notes"] = ""
 
-def _update_record(conn):
-    selected_df = _view_records(conn, context="update")
+def _update_record(conn, table_name):
+    selected_df = _prepare_grid(conn, table_name, context="update")
     # st.dataframe(selected_df)
     if selected_df is not None:
         row = selected_df.to_dict()
         if row:
             with st.form(key="upd_user"):
+                st.write(f'id: {row["id"][0]}')
                 st.text_input("Username:", value=row["username"][0], key="upd_username")
                 st.text_input("Password:", value=row["password"][0], key="upd_password")
                 st.checkbox("Is superuser?", value=row["su"][0], key="upd_su")
                 st.text_area('Notes', value=row["notes"][0], key="upd_notes")
                 st.form_submit_button('Update', on_click=clear_upd_form)
+
 
 
 ## Delete
@@ -217,17 +240,18 @@ def clear_del_form():
     st.session_state["del_username"] = ""
 
 
-def _delete_record(conn):
-    selected_df = _view_records(conn, context="delete")
+def _delete_record(conn, table_name):
+    selected_df = _prepare_grid(conn, table_name, context="delete")
     if selected_df is not None:
         row = selected_df.to_dict()
         if row:
             with st.form(key="del_user"):
+                st.write(f'id: {row["id"][0]}')
                 st.text_input("Username:", value=row["username"][0], key="del_username")
                 st.form_submit_button('Delete', on_click=clear_del_form)
 
 
-def _manage_table():
+def _manage_table(table_name):
     # # horizontal radio buttons
     # # https://discuss.streamlit.io/t/horizontal-radio-buttons/2114/7
     # st.write('<style>div.row-widget.stRadio > div{flex-direction:row;justify-content: center;} </style>', unsafe_allow_html=True)
@@ -243,11 +267,10 @@ def _manage_table():
             icons=icons, 
             menu_icon="cast", 
             default_index=0, 
-            orientation="horizontal")        
-        action_dict[action]["fn"](conn)
+            orientation="horizontal", key=f"table_{table_name}")        
+        action_dict[action]["fn"](conn, table_name)
 
 def _manage_db():
-
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
     sql_stmt = st.text_area("SQL commands", height=250, value=_create_table_stmt, key="sql_stmt")
     if st.button("Execute"):
@@ -274,7 +297,7 @@ meta_dict = {
 }
 
 action_dict =  {
-    "View": {"fn": _view_records, "icon": "list-task"}, 
+    "View": {"fn": _read_record, "icon": "list-task"}, 
     # "Search": {"fn": _search_record, "icon": "search"},
     "Add": {"fn": _create_record, "icon": "plus-square"},
     "Edit": {"fn": _update_record, "icon": "pencil-square"},
@@ -291,13 +314,13 @@ action_dict =  {
 def do_sidebar():
     objects = list(meta_dict.keys())
     icons = [meta_dict[i]["icon"] for i in objects]
+
     with st.sidebar:
         action = option_menu("Manage", objects, 
             icons=icons, 
             menu_icon="columns-gap", 
-            default_index=objects.index("Tables"),
+            default_index=objects.index("Database"),
             key="menu_action")
-        # st.sidebar.write(f"action={action}")
 
 
         c1, c2 = st.columns([1,4])
@@ -318,11 +341,16 @@ def do_sidebar():
             with open(__file__) as f:
                 st.code(f.read())
 
-
 def do_body():
-    action = st.session_state["menu_action"] if "menu_action" in st.session_state else "Tables"
-    if action:
+    action = st.session_state["menu_action"] if "menu_action" in st.session_state and st.session_state["menu_action"] else "Database"
+
+    _log_msg(f"action={action}")
+    if action == "Database":
         meta_dict[action]["fn"]()
+    elif action == "Tables":
+        table_name = st.session_state["table_name"] if "table_name" in st.session_state and st.session_state["table_name"] else "users"
+        _log_msg(f"table_name={table_name}")
+        meta_dict[action]["fn"](table_name)
 
 if __name__ == "__main__":
     do_sidebar()
