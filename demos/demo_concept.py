@@ -947,7 +947,11 @@ def do_tabs():
         rand['c'] = np.random.rand(N)    
         return rand
 
-    st.markdown("This __Tab__ example was found at [Multiple tabs in streamlit](https://discuss.streamlit.io/t/multiple-tabs-in-streamlit/1100/19?u=wgong27514)")
+    st.markdown("""
+    Multi-page app using [hydralit](https://github.com/TangleSpace/hydralit)
+    """, unsafe_allow_html=True)
+
+    st.markdown("Another lightweight __Tab__ example found at [Multiple tabs in streamlit](https://discuss.streamlit.io/t/multiple-tabs-in-streamlit/1100/19?u=wgong27514)")
     tab_content = _tabs({
             "Tab html": "<h2> Hello Streamlit, <br/> what a cool tool! </h2>",
             "Tab video": _tab__show_video, 

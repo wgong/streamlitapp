@@ -1,6 +1,7 @@
 streamlit
-streamlit-aggrid
 streamlit-option-menu
+streamlit-aggrid
 streamlit-player
-streamlit_book
 htbuilder
+# streamlit_book  # ebook
+# hydralit   # multi-page app
