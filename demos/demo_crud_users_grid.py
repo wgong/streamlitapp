@@ -288,7 +288,7 @@ def _manage_db():
                 res = conn.execute(sql_stmt)
                 st.write(res)
     if False:                
-        st.image("background_body.png")
+        st.image("https://user-images.githubusercontent.com/329928/155828764-b19a08e4-5346-4567-bba0-0ceeb5c2b241.png")
         with st.expander("view code"):
             with open(__file__) as f:
                 # st.code(inspect.getsource(do_widget))
@@ -336,7 +336,7 @@ def do_sidebar():
                 table_name = st.selectbox("Table:", df["name"].to_list(), key="table_name")
 
 
-        st.image("background_sidebar.png")
+        st.image("https://user-images.githubusercontent.com/329928/155828764-b19a08e4-5346-4567-bba0-0ceeb5c2b241.png")
 
         if st.checkbox('view code'):
             with open(__file__) as f:
