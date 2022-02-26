@@ -39,7 +39,7 @@ st.set_page_config(
 )
 
 # constants
-_DEBUG_ = True # False # 
+_DEBUG_ = False # True # 
 _KEY_PFX_SHOW = "show_"
 _KEY_PFX_ADD = "add_"
 _KEY_PFX_UPD = "upd_"
