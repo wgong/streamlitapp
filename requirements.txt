@@ -4,4 +4,4 @@ streamlit-aggrid
 streamlit-player
 htbuilder
 # streamlit_book  # ebook
-# hydralit   # multi-page app
+hydralit   # multi-page app
