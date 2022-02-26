@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 from io import StringIO 
 import base64
+import urllib
 import inspect
 from urllib.error import URLError
 
@@ -113,6 +114,10 @@ data_st_tutorials = {
 ##########################
 
 # cache functions for performance
+@st.experimental_memo(ttl=3600)
+def _read_code_from_url(url):
+    return [line.decode("utf-8") for line in urllib.request.urlopen(url)]
+
 @st.cache
 def _convert_df2csv(df, index=True):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
@@ -291,6 +296,19 @@ def do_data():
 
     with st.expander("Show code"):
         st.code(inspect.getsource(do_data))
+
+
+
+def do_code(url="https://raw.githubusercontent.com/wgong/streamlitapp/main/demos/demo_concept.py"):
+    with st.expander("Show code"):
+        st.code(inspect.getsource(do_code))
+
+    filename = url.split("/")[-1]
+    st.markdown(f"""
+    ### How to display github source code
+    [{filename}]({url})
+    """,unsafe_allow_html=True)
+    st.code("".join(_read_code_from_url(url)))
 
 
 
@@ -953,7 +971,15 @@ def do_tabs():
     [example](https://share.streamlit.io/wgong/streamlitapp/main/demos/demo_hydralit.py)
     """, unsafe_allow_html=True)
 
-    st.markdown("## Another lightweight __Tab__ example found at [Multiple tabs in streamlit](https://discuss.streamlit.io/t/multiple-tabs-in-streamlit/1100/19?u=wgong27514)")
+    with st.expander("Show code"):
+        st.code(inspect.getsource(do_tabs))
+
+    st.markdown("""
+    ## Another lightweight __Tab__ example 
+     
+    found at [Multiple tabs in streamlit](https://discuss.streamlit.io/t/multiple-tabs-in-streamlit/1100/19?u=wgong27514)
+    """, unsafe_allow_html=True)
+
     tab_content = _tabs({
             "Tab html": "<h2> Hello Streamlit, <br/> what a cool tool! </h2>",
             "Tab video": _tab__show_video, 
@@ -1124,6 +1150,7 @@ menu_dict = {
     },
     "concepts" : {
             "Data": {"fn": do_data, },
+            "Code": {"fn": do_code, },
             "Cache": {"fn": do_cache, "img": "https://www.blueskyamusements.com/images/site/template/bkg-sky.jpg"},
             "Chart": {"fn": do_chart, },
             "Media": {"fn": do_media, },
@@ -1149,9 +1176,9 @@ def do_body():
         if menu_item in menu_dict["concepts"].keys():
             menu_dict["concepts"][menu_item]["fn"]()
 
-    if st.sidebar.checkbox('Complete code'):
-        with open(__file__) as f:
-            st.sidebar.code(f.read())
+    # if st.sidebar.checkbox('Complete code'):
+    #     with open(__file__) as f:
+    #         st.sidebar.code(f.read())
 
     
 
