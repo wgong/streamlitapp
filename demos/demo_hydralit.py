@@ -8,7 +8,7 @@ import urllib
 emoji icons from https://getemoji.com/
 """
 
-app = hy.HydraApp(title='Simple Multi-Page App')
+app = hy.HydraApp(title='Simple Multi-Page App', nav_horizontal=True, layout="wide", sidebar_state="expanded")
 
 @app.addapp(title="Markdown", icon="🐸")
 def page_markdown():
