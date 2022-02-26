@@ -25,3 +25,11 @@ https://share.streamlit.io/wgong/streamlitapp/main/demos/demo_concept.py
 https://github.com/sebastiandres/streamlit_book
 
 
+## local source
+```
+cd ~/projects/streamlit
+virtualenv dev_venv
+.\dev_venv\scripts\activate
+pip install streamlit
+streamlit --version   # 1.6.0
+```
