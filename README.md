@@ -18,7 +18,14 @@ $ streamlit hello
 
 https://share.streamlit.io/wgong/streamlitapp/main/demos/demo_concept.py
 
-## Other examples
+## Cool examples
+
+### Hydralit
+
+The Hydralit package is a wrapping and template project to combine multiple independant (or somewhat dependant) Streamlit applications into a multi-page application.
+
+- https://github.com/TangleSpace/hydralit
+- https://github.com/TangleSpace/hydralit-example
 
 ### Streamlit eBook
 

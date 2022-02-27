@@ -418,6 +418,9 @@ def do_media():
     st.video("https://www.youtube.com/watch?v=rOjHhS5MtvA")
     st.video("https://www.youtube.com/watch?v=q2KBWmiL71o")
     st.video("https://www.youtube.com/watch?v=_T8LGqJtuGc")
+    st.subheader("Smart Squirrels")
+    st.video("https://www.youtube.com/watch?v=hFZFjoX2cGg")
+    st.video("https://www.youtube.com/watch?v=DTvS9lvRxZ8")
 
     st.header('Audio ')
     st.subheader("classical music from [http://www.lisztonian.com/](http://www.lisztonian.com/titles/index.php?s=title)")
