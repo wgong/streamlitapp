@@ -1141,6 +1141,18 @@ def do_footer():
     with st.expander("Show code"):
         st.code(inspect.getsource(do_footer))
 
+def do_grid():
+    st.markdown("""
+    simple SQLite [CRUD app](https://share.streamlit.io/wgong/streamlitapp/main/demos/demo_crud_users_grid.py) using Aggrid 
+    """, unsafe_allow_html=True)
+
+def do_book():
+    st.markdown("""
+    ### streamlit_book
+    - [src](https://github.com/sebastiandres/streamlit_book)
+    - [demo](https://share.streamlit.io/sebastiandres/stb_book_demo_v070/main)
+    """, unsafe_allow_html=True)
+
 # menu_item to handler mapping
 menu_dict = {
     "demos" : {
@@ -1150,6 +1162,8 @@ menu_dict = {
         "Plotting": {"fn": do_plotting},
         "Tab":  {"fn": do_tabs},
         "Footer":  {"fn": do_footer},
+        "Grid": {"fn" : do_grid},
+        "Book": {"fn" : do_book},
     },
     "concepts" : {
             "Data": {"fn": do_data, },
