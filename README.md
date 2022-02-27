@@ -27,10 +27,15 @@ The Hydralit package is a wrapping and template project to combine multiple inde
 - https://github.com/TangleSpace/hydralit
 - https://github.com/TangleSpace/hydralit-example
 
-### Streamlit eBook
+### Streamlit Book
 
-https://github.com/sebastiandres/streamlit_book
+- https://github.com/sebastiandres/streamlit_book
+- https://github.com/sebastiandres/stb_book_demo_v070.git
+    - https://share.streamlit.io/sebastiandres/stb_book_demo_v070/main
+- https://github.com/sebastiandres/stb_chapter_demo_v070.git
+    - https://share.streamlit.io/sebastiandres/stb_chapter_demo_v070/main
 
+see ../stb/README.md
 
 ## local source
 ```

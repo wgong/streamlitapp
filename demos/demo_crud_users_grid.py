@@ -40,37 +40,37 @@ st.set_page_config(
 
 # constants
 _DEBUG_ = False # True # 
-_KEY_PFX_SHOW = "show_"
-_KEY_PFX_ADD = "add_"
-_KEY_PFX_UPD = "upd_"
-_KEY_PFX_DEL = "del_"
 
-_DISABLED_FLAG = {
-    "create": False,
-    "update": False,
-    "show": True,
-    "delete": True,
+# CRUD form config dict
+_FORM_CONFIG = {
+    "view": {"read_only": True, "key_pfx": "view", "selectable": True},
+    "create": {"read_only": False, "key_pfx": "add", "selectable": False},
+    "update": {"read_only": False, "key_pfx": "upd", "selectable": True},
+    "delete": {"read_only": True, "key_pfx": "del", "selectable": True},
 }
 
 _DB_NAME = "users.db"
 
 _SQL_SELECT_TABLE_NAME = """
-        SELECT 
-        name
-    FROM 
-        sqlite_schema
-    WHERE 
-        type ='table'
-        order by name
+SELECT 
+    name
+FROM 
+    sqlite_schema
+WHERE 
+    type ='table'
+    order by name
+;
 """
 
-_SQL_CREATE_TABLE = """create table if not exists users (
+_SQL_CREATE_TABLES = """
+create table if not exists users (
     id INTEGER PRIMARY KEY,
     username UNIQUE ON CONFLICT REPLACE, 
     password, 
     su, 
     notes
-);"""
+);
+"""
 
 # Aggrid options
 _GRID_OPTIONS = {
@@ -93,6 +93,8 @@ _GRID_OPTIONS = {
 #
 # will give this error:
 # ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 3484 and this is thread id 9876.
+
+## helper functions
 def _log_msg(msg):
     if _DEBUG_:
         st.info(msg)
@@ -102,12 +104,13 @@ def _hash_it(password):
 
 def _get_records(conn, table_name, limit=10000):
     sql_stmt = f"""
-        select * from {table_name} limit {limit}
+        select * from {table_name} limit {limit};
     """
     return pd.read_sql(sql_stmt, conn)
 
 def _prepare_grid(conn, table_name, context=None):
-    enable_selection=True if context in ["read", "update", "delete"] else False
+    # enable_selection=True if context in ["view", "update", "delete"] else False
+    enable_selection = _FORM_CONFIG[context]["selectable"]
     df = _get_records(conn, table_name)
     gb = GridOptionsBuilder.from_dataframe(df)
     if enable_selection:
@@ -147,114 +150,125 @@ def _search_record(conn, table_name):
         st.text_input("Phrase:", value="", key="find_phrase")
         st.form_submit_button('Search', on_click=clear_find_form)
 
+def _gen_key(key_pfx, table_name, key_name=""):
+    return f"{key_pfx}_{table_name}_{key_name}"
+
 def _default_val(row, col_name):
     return "" if row is None else row[col_name][0]
 
-def _clear_form_users(key_pfx):
-    st.session_state[f"{key_pfx}username"] = ""
-    st.session_state[f"{key_pfx}password"] = ""
-    st.session_state[f"{key_pfx}su"] = False
-    st.session_state[f"{key_pfx}notes"] = ""
+def _clear_form(key_pfx, table_name):
+    if table_name == "users":
+        for col in ["username", "password", "notes"]:
+            st.session_state[_gen_key(key_pfx, table_name, col)] = ""
+        st.session_state[_gen_key(key_pfx, table_name, "su")] = False
 
-def _gen_form_users(key_pfx, ctx, row=None):
+
+def _generate_form(ctx, row=None):
+    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "users"
+    key_pfx = _FORM_CONFIG[ctx]["key_pfx"]
     if ctx != "create":
         st.write(f'id: {_default_val(row, "id")}')
-    _log_msg(f"key_pfx={key_pfx}, ctx={ctx}, disabled={_DISABLED_FLAG[ctx]}")
-    st.text_input("Username(*)", value=_default_val(row, "username"), key=f"{key_pfx}username", disabled=_DISABLED_FLAG[ctx])
-    st.text_input("Password(*)", value=_default_val(row, "password"), key=f"{key_pfx}password", disabled=_DISABLED_FLAG[ctx])
-    st.checkbox("Is a superuser?", value=_default_val(row, "su"), key=f"{key_pfx}su", disabled=_DISABLED_FLAG[ctx])
-    st.text_area('Notes', value=_default_val(row, "notes"), key=f"{key_pfx}notes", disabled=_DISABLED_FLAG[ctx])
+    
+    _disabled = _FORM_CONFIG[ctx]["read_only"]
+    _log_msg(f"table_name={table_name}, key_pfx={key_pfx}, ctx={ctx}, disabled={_disabled}")
+    if table_name == "users":
+        st.text_input("Username(*)", value=_default_val(row, "username"), key=_gen_key(key_pfx, table_name, "username"), disabled=_disabled)
+        st.text_input("Password(*)", value=_default_val(row, "password"), key=_gen_key(key_pfx, table_name, "password"), disabled=_disabled)
+        st.checkbox("Is a superuser?", value=_default_val(row, "su"), key=_gen_key(key_pfx, table_name, "su"), disabled=_disabled)
+        st.text_area('Notes', value=_default_val(row, "notes"), key=_gen_key(key_pfx, table_name, "notes"), disabled=_disabled)
 
 ## callback for Create
-def _clear_form_add_users(*args, **kwargs):
+def _clear_form_add_(*args, **kwargs):
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
-    table_name = st.session_state["table_name"] if "table_name" in st.session_state else ""
-    if not table_name:
-        st.error("No table is selected!")
-
+    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "users"
     # st.write(f"kwargs: {kwargs}")
-    key_pfx = kwargs.get("key_pfx", _KEY_PFX_ADD)
+    key_pfx = kwargs.get("key_pfx")
     with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
-        user_ = st.session_state[f"{key_pfx}username"]
-        pass_ = st.session_state[f"{key_pfx}password"]
-        if user_ and pass_:
-            su_ = st.session_state[f"{key_pfx}su"]
-            notes_ = st.session_state[f"{key_pfx}notes"]
-            conn.execute(
-                f"INSERT INTO {table_name} (username, password, su, notes) VALUES(?,?,?,?)",
-                (user_, _hash_it(pass_), su_, notes_),
-            )
-        else:
-            st.error(f"required inputs are missing")
+        if table_name == "users":
+            user_ = st.session_state[_gen_key(key_pfx, table_name, "username")]
+            pass_ = st.session_state[_gen_key(key_pfx, table_name, "password")]
+            if user_ and pass_:
+                su_ = st.session_state[_gen_key(key_pfx, table_name, "su")]
+                notes_ = st.session_state[_gen_key(key_pfx, table_name, "notes")]
+                conn.execute(
+                    f"INSERT INTO {table_name} (username, password, su, notes) VALUES(?,?,?,?)",
+                    (user_, _hash_it(pass_), su_, notes_),
+                )
+            else:
+                st.error(f"required inputs are missing")
 
-    _clear_form_users(key_pfx)
+        _clear_form(key_pfx, table_name)
 
 ## callback for Update
-def _clear_form_upd_users(*args, **kwargs):
+def _clear_form_upd_(*args, **kwargs):
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
-    table_name = st.session_state["table_name"] if "table_name" in st.session_state else ""
-    if not table_name:
-        st.error("No table is selected!")
-
-    key_pfx = kwargs.get("key_pfx", _KEY_PFX_UPD)   
+    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "users"
+    key_pfx = kwargs.get("key_pfx")   
     with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
-        username_ = st.session_state[f"{key_pfx}username"]
-        pass_ = st.session_state[f"{key_pfx}password"]
-        su_ = st.session_state[f"{key_pfx}su"]
-        notes_ = st.session_state[f"{key_pfx}notes"]
-        conn.execute(
-                f"update {table_name} set password = ?,su = ?, notes = ? where username = ?", (_hash_it(pass_),su_,notes_,username_)
-            )
+        if table_name == "users":        
+            username_ = st.session_state[_gen_key(key_pfx, table_name, "username")]
+            pass_ = st.session_state[_gen_key(key_pfx, table_name, "password")]
+            su_ = st.session_state[_gen_key(key_pfx, table_name, "su")]
+            notes_ = st.session_state[_gen_key(key_pfx, table_name, "notes")]
+            conn.execute(
+                    f"update {table_name} set password = ?,su = ?, notes = ? where username = ?", (_hash_it(pass_),su_,notes_,username_)
+                )
 
-    _clear_form_users(key_pfx)
+        _clear_form(key_pfx, table_name)
 
 
 ## callback for Delete
-def _clear_form_del_users(*args, **kwargs):
+def _clear_form_del_(*args, **kwargs):
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
-    table_name = st.session_state["table_name"] if "table_name" in st.session_state else ""
-    if not table_name:
-        st.error("No table is selected!")
-    key_pfx = kwargs.get("key_pfx", _KEY_PFX_DEL)
+    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "users"
+    key_pfx = kwargs.get("key_pfx")
     with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
-        username_ = st.session_state[f"{key_pfx}username"]
-        conn.execute(
-                f"delete from {table_name} where username = ?", (username_,)
-            )
+        if table_name == "users":           
+            username_ = st.session_state[_gen_key(key_pfx, table_name, "username")]
+            conn.execute(
+                    f"delete from {table_name} where username = ?", (username_,)
+                )
 
-    _clear_form_users(key_pfx)
+        _clear_form(key_pfx, table_name)
 
 ## Create
-def _create_record(conn, table_name, key_pfx=_KEY_PFX_ADD):
-    selected_df = _prepare_grid(conn, table_name, context="create")
-    with st.form(key=f"{key_pfx}{table_name}"):
-        _gen_form_users(key_pfx, "create")
-        st.form_submit_button('Add', on_click=_clear_form_add_users, kwargs={"key_pfx": key_pfx})
-## Read
-def _show_record(conn, table_name, key_pfx=_KEY_PFX_SHOW):
-    selected_df = _prepare_grid(conn, table_name, context="read")
+def _create_record(conn, table_name):
+    ctx = "create"
+    key_pfx = _FORM_CONFIG[ctx]["key_pfx"]
+    selected_df = _prepare_grid(conn, table_name, context=ctx)
+    with st.form(key=_gen_key(key_pfx, table_name)): 
+        _generate_form(ctx)
+        st.form_submit_button('Add', on_click=_clear_form_add_, kwargs={"key_pfx": key_pfx})
+## view
+def _view_record(conn, table_name):
+    ctx = "view"
+    selected_df = _prepare_grid(conn, table_name, context=ctx)
     if selected_df is not None:
         row = selected_df.to_dict()
         if row:
-            _gen_form_users(key_pfx, "show", row=row)
+            _generate_form(ctx, row=row)
 ## Update   
-def _update_record(conn, table_name, key_pfx=_KEY_PFX_UPD):
-    selected_df = _prepare_grid(conn, table_name, context="update")
+def _update_record(conn, table_name):
+    ctx = "update"
+    key_pfx = _FORM_CONFIG[ctx]["key_pfx"]    
+    selected_df = _prepare_grid(conn, table_name, context=ctx)
     if selected_df is not None:
         row = selected_df.to_dict()
         if row:
-            with st.form(key=f"{key_pfx}{table_name}"):
-                _gen_form_users(key_pfx, "update", row=row)
-                st.form_submit_button('Update', on_click=_clear_form_upd_users)
+            with st.form(key=_gen_key(key_pfx, table_name)):
+                _generate_form(ctx, row=row)
+                st.form_submit_button('Update', on_click=_clear_form_upd_, kwargs={"key_pfx": key_pfx})
 ## Delete
-def _delete_record(conn, table_name, key_pfx=_KEY_PFX_DEL):
-    selected_df = _prepare_grid(conn, table_name, context="delete")
+def _delete_record(conn, table_name):
+    ctx = "delete"
+    key_pfx = _FORM_CONFIG[ctx]["key_pfx"]        
+    selected_df = _prepare_grid(conn, table_name, context=ctx)
     if selected_df is not None:
         row = selected_df.to_dict()
         if row:
-            with st.form(key=f"{key_pfx}{table_name}"):
-                _gen_form_users(key_pfx, "delete", row=row)
-                st.form_submit_button('Delete', on_click=_clear_form_del_users)
+            with st.form(key=_gen_key(key_pfx, table_name)):
+                _generate_form(ctx, row=row)
+                st.form_submit_button('Delete', on_click=_clear_form_del_, kwargs={"key_pfx": key_pfx})
 
 
 def _manage_table(table_name):
@@ -278,7 +292,7 @@ def _manage_table(table_name):
 
 def _manage_db():
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
-    sql_stmt = st.text_area("SQL commands", height=250, value=_SQL_CREATE_TABLE, key="sql_stmt")
+    sql_stmt = st.text_area("SQL commands", height=250, value=_SQL_CREATE_TABLES, key="sql_stmt")
     if st.button("Execute"):
         with sql.connect(f"file:{db_name}?mode=rwc", uri=True) as conn:
             if sql_stmt.strip().lower().startswith("select"):
@@ -300,7 +314,7 @@ meta_dict = {
 }
 
 action_dict =  {
-    "View": {"fn": _show_record, "icon": "list-task"}, 
+    "View": {"fn": _view_record, "icon": "list-task"}, 
     # "Search": {"fn": _search_record, "icon": "search"},
     "Add": {"fn": _create_record, "icon": "plus-square"},
     "Edit": {"fn": _update_record, "icon": "pencil-square"},
