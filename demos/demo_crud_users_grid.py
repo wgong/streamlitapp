@@ -83,9 +83,8 @@ _GRID_OPTIONS = {
     "grid_height": 250,
     "return_mode_value": DataReturnMode.__members__["FILTERED"],
     "update_mode_value": GridUpdateMode.__members__["MODEL_CHANGED"],
-    "fit_columns_on_grid_load": True,
+    "fit_columns_on_grid_load": False,
     "selection_mode": "single",  # "multiple",
-    "fit_columns_on_grid_load": True,
     "allow_unsafe_jscode": True,
     "groupSelectsChildren": True,
     "groupSelectsFiltered": True,
@@ -170,6 +169,7 @@ _SCHEMA_DICT = {
 }
 
 def _get_form_state(key_pfx, table_name):
+    # fetch form field values and store them into form_data dict
     form_data = {}
     if table_name in ["s_user", "s_person"]:
         for col in _SCHEMA_DICT[table_name]:
@@ -179,13 +179,14 @@ def _get_form_state(key_pfx, table_name):
 
 
 def _clear_form(key_pfx, table_name):
-
+    # clear form
     for col in _SCHEMA_DICT[table_name]:
         form_key = _gen_key(key_pfx, table_name, col)
         if form_key in st.session_state:
             st.session_state[_gen_key(key_pfx, table_name, col)] = False if col.startswith("flag_") else ""
 
 def _generate_form(ctx, row=None):
+    # create form for a given table
     table_name = st.session_state["table_name"] if "table_name" in st.session_state else "s_user"
     key_pfx = _FORM_CONFIG[ctx]["key_pfx"]
     if ctx != "create":
@@ -208,9 +209,8 @@ def _generate_form(ctx, row=None):
         st.text_area('Address', value=_default_val(row, "address"), key=_gen_key(key_pfx, table_name, "address"), disabled=_disabled)
         st.text_area('Related person(s)', value=_default_val(row, "related_persons"), key=_gen_key(key_pfx, table_name, "related_persons"), disabled=_disabled)
 
-
-## callback for Create
-def _clear_form_add_(*args, **kwargs):
+## Create callback
+def _callback_add_(*args, **kwargs):
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
     table_name = st.session_state["table_name"] if "table_name" in st.session_state else "s_user"
     # st.write(f"kwargs: {kwargs}")
@@ -224,7 +224,9 @@ def _clear_form_add_(*args, **kwargs):
                 notes = form_data["notes"]
                 flag_admin = form_data["flag_admin"]
                 conn.execute(
-                    f"INSERT INTO {table_name} (username, password, notes, flag_admin) VALUES(?,?,?,?)",
+                    f"""INSERT INTO {table_name} 
+                    (username, password, notes, flag_admin) 
+                    VALUES(?,?,?,?)""",
                     (username, _hash_it(password), notes, flag_admin),
                 )
             else:
@@ -242,7 +244,8 @@ def _clear_form_add_(*args, **kwargs):
                 address = form_data["address"]
                 related_persons = form_data["related_persons"]
                 conn.execute(
-                    f"""INSERT INTO {table_name} (full_name, email, phone, notes, url_twit, url_fb, address, related_persons) 
+                    f"""INSERT INTO {table_name} 
+                    (full_name, email, phone, notes, url_twit, url_fb, address, related_persons) 
                     VALUES(?, ?, ?, ?, ?, ?, ?, ?)""",
                     (full_name, email, phone, notes, url_twit, url_fb, address, related_persons),
                 )
@@ -254,7 +257,7 @@ def _clear_form_add_(*args, **kwargs):
 
 
 ## callback for Update
-def _clear_form_upd_(*args, **kwargs):
+def _callback_upd_(*args, **kwargs):
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
     table_name = st.session_state["table_name"] if "table_name" in st.session_state else "s_user"
     key_pfx = kwargs.get("key_pfx")   
@@ -266,8 +269,10 @@ def _clear_form_upd_(*args, **kwargs):
             notes = form_data["notes"]
             flag_admin = form_data["flag_admin"]
             conn.execute(
-                    f"""update {table_name} set password = ?, notes = ?, flag_admin = ? where username = ?""", 
-                    (_hash_it(password),notes,flag_admin,username)
+                    f"""update {table_name} 
+                    set password = ?, notes = ?, flag_admin = ? 
+                    where username = ?""", 
+                    (_hash_it(password),notes,flag_admin, username)
                 )
         elif table_name == "s_person": 
             form_data = _get_form_state(key_pfx, table_name)       
@@ -281,7 +286,8 @@ def _clear_form_upd_(*args, **kwargs):
             related_persons = form_data["related_persons"]
 
             conn.execute(
-                    f"""update {table_name} set email = ?, phone = ?, notes = ?, url_twit = ?, url_fb = ?, address = ? , related_persons = ?
+                    f"""update {table_name} 
+                    set email = ?, phone = ?, notes = ?, url_twit = ?, url_fb = ?, address = ? , related_persons = ?
                     where full_name = ?""", 
                     (email, phone , notes , url_twit , url_fb , address, related_persons, full_name)
                 )
@@ -290,7 +296,7 @@ def _clear_form_upd_(*args, **kwargs):
 
 
 ## callback for Delete
-def _clear_form_del_(*args, **kwargs):
+def _callback_del_(*args, **kwargs):
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
     table_name = st.session_state["table_name"] if "table_name" in st.session_state else "s_user"
     key_pfx = kwargs.get("key_pfx")
@@ -320,7 +326,7 @@ def _create_record(conn, table_name):
     selected_df = _prepare_grid(conn, table_name, context=ctx)
     with st.form(key=_gen_key(key_pfx, table_name)): 
         _generate_form(ctx)
-        st.form_submit_button('Add', on_click=_clear_form_add_, kwargs={"key_pfx": key_pfx})
+        st.form_submit_button('Add', on_click=_callback_add_, kwargs={"key_pfx": key_pfx})
 ## view
 def _view_record(conn, table_name):
     ctx = "view"
@@ -339,7 +345,7 @@ def _update_record(conn, table_name):
         if row:
             with st.form(key=_gen_key(key_pfx, table_name)):
                 _generate_form(ctx, row=row)
-                st.form_submit_button('Update', on_click=_clear_form_upd_, kwargs={"key_pfx": key_pfx})
+                st.form_submit_button('Update', on_click=_callback_upd_, kwargs={"key_pfx": key_pfx})
 ## Delete
 def _delete_record(conn, table_name):
     ctx = "delete"
@@ -350,7 +356,7 @@ def _delete_record(conn, table_name):
         if row:
             with st.form(key=_gen_key(key_pfx, table_name)):
                 _generate_form(ctx, row=row)
-                st.form_submit_button('Delete', on_click=_clear_form_del_, kwargs={"key_pfx": key_pfx})
+                st.form_submit_button('Delete', on_click=_callback_del_, kwargs={"key_pfx": key_pfx})
 
 
 def _manage_table(table_name):
@@ -432,7 +438,10 @@ def do_sidebar():
             if action == "Tables":            
                 conn = sql.connect(f"file:{db_name}?mode=rw", uri=True)
                 df = pd.read_sql(_SQL_SELECT_TABLE_NAME, conn)
-                table_name = st.selectbox("Table:", df["name"].to_list(), key="table_name")
+                tables = df["name"].to_list()
+                table_name = st.selectbox("Table:", tables, 
+                    index=tables.index("s_user"),
+                    key="table_name")
 
 
         st.image("https://user-images.githubusercontent.com/329928/155828764-b19a08e4-5346-4567-bba0-0ceeb5c2b241.png")
