@@ -9,7 +9,7 @@ $ pip install streamlit streamlit-option-menu streamlit-aggrid
     - streamlit-aggrid
 
 
-## TODO
+## TODO - streamlit-crud
 
 - parse table schema to get column name/type and build create/update form programmatically
 
@@ -29,17 +29,34 @@ import os.path
 import sqlite3 as sql
 import hashlib
 import pandas as pd
+import re
 
 
 # Initial page config
 st.set_page_config(
-     page_title='Streamlit DB CRUD Demo',
+     page_title='Streamlit CRUD Demo',
      layout="wide",
      initial_sidebar_state="expanded",
 )
 
+
+
 # constants
 _DEBUG_ = False # True # 
+_IS_ADMIN = False
+
+# strings for i8n
+_STR_MENU_TITLE = "Streamlit CRUD"
+_STR_MENU_DATABASE = "Database"
+_STR_MENU_TABLES = "Tables"
+_STR_ACTION_VIEW = "View"
+_STR_ACTION_ADD = "Add"
+_STR_ACTION_EDIT = "Edit"
+_STR_ACTION_DELETE = "Delete"
+_STR_BUTTON_DELETE = "Delete"
+_STR_BUTTON_CREATE = "Create"
+_STR_BUTTON_UPDATE = "Update"
+_STR_BUTTON_EXECUTE = "Execute"
 
 # CRUD form config dict
 _FORM_CONFIG = {
@@ -50,8 +67,8 @@ _FORM_CONFIG = {
 }
 
 _DB_NAME = "journals.db"
-
-
+_FILE_SCHEMA = "schema.sql"
+_BAD_SQL = re.compile('\s*(drop|delete)\s+')
 
 _SQL_SELECT_TABLE_NAME = """
 SELECT 
@@ -64,7 +81,6 @@ WHERE
 ;
 """
 
-_FILE_SCHEMA = "schema.sql"
 if os.path.exists(_FILE_SCHEMA):
     _SQL_CREATE_TABLES = open(_FILE_SCHEMA).read()
 else:
@@ -107,7 +123,7 @@ def _log_msg(msg):
 def _hash_it(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
-def _get_records(conn, table_name, limit=1000):
+def _query_records(conn, table_name, limit=1000):
     sql_stmt = f"""
         select * from {table_name} limit {limit};
     """
@@ -116,7 +132,7 @@ def _get_records(conn, table_name, limit=1000):
 def _prepare_grid(conn, table_name, context=None):
     # enable_selection=True if context in ["view", "update", "delete"] else False
     enable_selection = _FORM_CONFIG[context]["selectable"]
-    df = _get_records(conn, table_name)
+    df = _query_records(conn, table_name)
     gb = GridOptionsBuilder.from_dataframe(df)
     if enable_selection:
         gb.configure_selection(_GRID_OPTIONS["selection_mode"],
@@ -144,16 +160,16 @@ def _prepare_grid(conn, table_name, context=None):
     else:
         return None
 
-## Full-text Search
-def clear_find_form():
-    pass
+# ## Full-text Search
+# def clear_find_form():
+#     pass
 
-def _search_record(conn, table_name):
-    _prepare_grid(conn, table_name, context="search")
+# def _search_record(conn, table_name):
+#     _prepare_grid(conn, table_name, context="search")
 
-    with st.form(key="find_user"):
-        st.text_input("Phrase:", value="", key="find_phrase")
-        st.form_submit_button('Search', on_click=clear_find_form)
+#     with st.form(key="find_user"):
+#         st.text_input("Phrase:", value="", key="find_phrase")
+#         st.form_submit_button('Search', on_click=clear_find_form)
 
 def _gen_key(key_pfx, table_name, key_name=""):
     return f"{key_pfx}_{table_name}_{key_name}"
@@ -161,14 +177,14 @@ def _gen_key(key_pfx, table_name, key_name=""):
 def _default_val(row, col_name):
     return "" if row is None else row[col_name][0]
 
-
 ## ================================ customize BELOW for each table to be added ========================================
+# TODO - get this from db schema
 _SCHEMA_DICT = {
     "s_user" : ["username", "password", "notes", "flag_admin"],
     "s_person" : ["full_name", "email", "phone", "notes", 'url_twit', 'url_fb', 'address', 'related_persons', 'attachments', 'flag_active', 'added_at', 'edited_at', 'added_by', 'edited_by'],
 }
 
-def _get_form_state(key_pfx, table_name):
+def _form__read(key_pfx, table_name):
     # fetch form field values and store them into form_data dict
     form_data = {}
     if table_name in ["s_user", "s_person"]:
@@ -177,15 +193,14 @@ def _get_form_state(key_pfx, table_name):
             form_data[col] = st.session_state[form_key] if form_key in st.session_state  else ""
     return form_data
 
-
-def _clear_form(key_pfx, table_name):
+def _form__clear(key_pfx, table_name):
     # clear form
     for col in _SCHEMA_DICT[table_name]:
         form_key = _gen_key(key_pfx, table_name, col)
         if form_key in st.session_state:
             st.session_state[_gen_key(key_pfx, table_name, col)] = False if col.startswith("flag_") else ""
 
-def _generate_form(ctx, row=None):
+def _form__create(ctx, row=None):
     # create form for a given table
     table_name = st.session_state["table_name"] if "table_name" in st.session_state else "s_user"
     key_pfx = _FORM_CONFIG[ctx]["key_pfx"]
@@ -194,6 +209,7 @@ def _generate_form(ctx, row=None):
     
     _disabled = _FORM_CONFIG[ctx]["read_only"]
     _log_msg(f"table_name={table_name}, key_pfx={key_pfx}, ctx={ctx}, disabled={_disabled}")
+    # TODO - get ui hints from schema
     if table_name == "s_user":
         st.text_input("Username(*)", value=_default_val(row, "username"), key=_gen_key(key_pfx, table_name, "username"), disabled=_disabled)
         st.text_input("Password(*)", value=_default_val(row, "password"), key=_gen_key(key_pfx, table_name, "password"), disabled=_disabled)
@@ -209,134 +225,118 @@ def _generate_form(ctx, row=None):
         st.text_area('Address', value=_default_val(row, "address"), key=_gen_key(key_pfx, table_name, "address"), disabled=_disabled)
         st.text_area('Related person(s)', value=_default_val(row, "related_persons"), key=_gen_key(key_pfx, table_name, "related_persons"), disabled=_disabled)
 
-## Create callback
-def _callback_add_(*args, **kwargs):
+def _callback_create(*args, **kwargs):
+    ## Create callback
+    # st.write(f"kwargs: {kwargs}")
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
     table_name = st.session_state["table_name"] if "table_name" in st.session_state else "s_user"
-    # st.write(f"kwargs: {kwargs}")
     key_pfx = kwargs.get("key_pfx")
+    form_data = _form__read(key_pfx, table_name)
+    if not form_data:
+        st.warning(f"_form__read({key_pfx}, {table_name}): no data")
+        return
+
     with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
         if table_name == "s_user":
-            form_data = _get_form_state(key_pfx, table_name)
-            username = form_data["username"]
-            password = form_data["password"]
+            username, password = form_data["username"], form_data["password"]
             if username and password:
-                notes = form_data["notes"]
-                flag_admin = form_data["flag_admin"]
                 conn.execute(
                     f"""INSERT INTO {table_name} 
                     (username, password, notes, flag_admin) 
                     VALUES(?,?,?,?)""",
-                    (username, _hash_it(password), notes, flag_admin),
+                    (username, _hash_it(password), form_data["notes"], form_data["flag_admin"]),
                 )
             else:
                 st.error(f"required inputs are missing")
 
         elif table_name == "s_person":
-            form_data = _get_form_state(key_pfx, table_name)
             full_name = form_data["full_name"]
             if full_name:
-                email = form_data["email"]
-                phone = form_data["phone"]
-                notes = form_data["notes"]
-                url_twit = form_data["url_twit"]
-                url_fb = form_data["url_fb"]
-                address = form_data["address"]
-                related_persons = form_data["related_persons"]
                 conn.execute(
                     f"""INSERT INTO {table_name} 
                     (full_name, email, phone, notes, url_twit, url_fb, address, related_persons) 
                     VALUES(?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (full_name, email, phone, notes, url_twit, url_fb, address, related_persons),
+                    (full_name, form_data["email"], form_data["phone"], form_data["notes"], 
+                        form_data["url_twit"], form_data["url_fb"], form_data["address"], form_data["related_persons"]),
                 )
             else:
                 st.error(f"required inputs are missing")
 
+        _form__clear(key_pfx, table_name)
 
-        _clear_form(key_pfx, table_name)
-
-
-## callback for Update
-def _callback_upd_(*args, **kwargs):
-    db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
-    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "s_user"
-    key_pfx = kwargs.get("key_pfx")   
-    with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
-        if table_name == "s_user": 
-            form_data = _get_form_state(key_pfx, table_name)       
-            username = form_data["username"]
-            password = form_data["password"]
-            notes = form_data["notes"]
-            flag_admin = form_data["flag_admin"]
-            conn.execute(
-                    f"""update {table_name} 
-                    set password = ?, notes = ?, flag_admin = ? 
-                    where username = ?""", 
-                    (_hash_it(password),notes,flag_admin, username)
-                )
-        elif table_name == "s_person": 
-            form_data = _get_form_state(key_pfx, table_name)       
-            full_name = form_data["full_name"]
-            email = form_data["email"]
-            phone = form_data["phone"]
-            notes = form_data["notes"]
-            url_twit = form_data["url_twit"]
-            url_fb = form_data["url_fb"]
-            address = form_data["address"]
-            related_persons = form_data["related_persons"]
-
-            conn.execute(
-                    f"""update {table_name} 
-                    set email = ?, phone = ?, notes = ?, url_twit = ?, url_fb = ?, address = ? , related_persons = ?
-                    where full_name = ?""", 
-                    (email, phone , notes , url_twit , url_fb , address, related_persons, full_name)
-                )
-
-        _clear_form(key_pfx, table_name)
-
-
-## callback for Delete
-def _callback_del_(*args, **kwargs):
+def _callback_update(*args, **kwargs):
+    ## callback for Update
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
     table_name = st.session_state["table_name"] if "table_name" in st.session_state else "s_user"
     key_pfx = kwargs.get("key_pfx")
+    form_data = _form__read(key_pfx, table_name)  
+    if not form_data:
+        st.warning(f"_form__read({key_pfx}, {table_name}): no data")
+        return
+
     with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
-        if table_name == "s_user":  
-            form_data = _get_form_state(key_pfx, table_name)           
-            username = form_data["username"]
+        if table_name == "s_user":     
             conn.execute(
-                    f"delete from {table_name} where username = ?", (username,)
+                    f"""UPDATE {table_name} 
+                    SET password = ?, notes = ?, flag_admin = ? 
+                    WHERE username = ?""", 
+                    (_hash_it(form_data["password"]),form_data["notes"],form_data["flag_admin"], 
+                        form_data["username"])
                 )
-        elif table_name == "s_person":  
-            form_data = _get_form_state(key_pfx, table_name)           
-            full_name = form_data["full_name"]
+        elif table_name == "s_person":   
             conn.execute(
-                    f"delete from {table_name} where full_name = ?", (full_name,)
+                    f"""UPDATE {table_name} 
+                    SET email = ?, phone = ?, notes = ?, url_twit = ?, url_fb = ?, address = ? , related_persons = ?
+                    WHERE full_name = ?""", 
+                    (form_data["email"], form_data["phone"], form_data["notes"], 
+                        form_data["url_twit"], form_data["url_fb"], form_data["address"], form_data["related_persons"], 
+                        form_data["full_name"])
                 )
 
-        _clear_form(key_pfx, table_name)
+        _form__clear(key_pfx, table_name)
+
+def _callback_delete(*args, **kwargs):
+    ## callback for Delete
+    db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
+    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "s_user"
+    key_pfx = kwargs.get("key_pfx")
+    form_data = _form__read(key_pfx, table_name)  
+    if not form_data:
+        st.warning(f"_form__read({key_pfx}, {table_name}): no data")
+        return
+
+    with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
+        if table_name == "s_user":         
+            conn.execute(
+                    f"DELETE FROM {table_name} WHERE username = ?", (form_data["username"],)
+                )
+        elif table_name == "s_person":  
+            conn.execute(
+                    f"DELETE FROM {table_name} WHERE full_name = ?", (form_data["full_name"],)
+                )
+
+        _form__clear(key_pfx, table_name)
 
 ## ================================ customize ABOVE for each table to be added ========================================
 
 
-## Create
-def _create_record(conn, table_name):
+def _record__create(conn, table_name):
     ctx = "create"
     key_pfx = _FORM_CONFIG[ctx]["key_pfx"]
     selected_df = _prepare_grid(conn, table_name, context=ctx)
     with st.form(key=_gen_key(key_pfx, table_name)): 
-        _generate_form(ctx)
-        st.form_submit_button('Add', on_click=_callback_add_, kwargs={"key_pfx": key_pfx})
-## view
-def _view_record(conn, table_name):
+        _form__create(ctx)
+        st.form_submit_button(_STR_BUTTON_CREATE, on_click=_callback_create, kwargs={"key_pfx": key_pfx})
+
+def _record__view(conn, table_name):
     ctx = "view"
     selected_df = _prepare_grid(conn, table_name, context=ctx)
     if selected_df is not None:
         row = selected_df.to_dict()
         if row:
-            _generate_form(ctx, row=row)
-## Update   
-def _update_record(conn, table_name):
+            _form__create(ctx, row=row)
+
+def _record__update(conn, table_name):
     ctx = "update"
     key_pfx = _FORM_CONFIG[ctx]["key_pfx"]    
     selected_df = _prepare_grid(conn, table_name, context=ctx)
@@ -344,10 +344,10 @@ def _update_record(conn, table_name):
         row = selected_df.to_dict()
         if row:
             with st.form(key=_gen_key(key_pfx, table_name)):
-                _generate_form(ctx, row=row)
-                st.form_submit_button('Update', on_click=_callback_upd_, kwargs={"key_pfx": key_pfx})
-## Delete
-def _delete_record(conn, table_name):
+                _form__create(ctx, row=row)
+                st.form_submit_button(_STR_BUTTON_UPDATE, on_click=_callback_update, kwargs={"key_pfx": key_pfx})
+
+def _record__delete(conn, table_name):
     ctx = "delete"
     key_pfx = _FORM_CONFIG[ctx]["key_pfx"]        
     selected_df = _prepare_grid(conn, table_name, context=ctx)
@@ -355,8 +355,8 @@ def _delete_record(conn, table_name):
         row = selected_df.to_dict()
         if row:
             with st.form(key=_gen_key(key_pfx, table_name)):
-                _generate_form(ctx, row=row)
-                st.form_submit_button('Delete', on_click=_callback_del_, kwargs={"key_pfx": key_pfx})
+                _form__create(ctx, row=row)
+                st.form_submit_button(_STR_BUTTON_DELETE, on_click=_callback_delete, kwargs={"key_pfx": key_pfx})
 
 
 def _manage_table(table_name):
@@ -381,7 +381,7 @@ def _manage_table(table_name):
 def _manage_db():
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
     sql_stmts = st.text_area("SQL commands", height=250, value=_SQL_CREATE_TABLES, key="sql_stmt")
-    if st.button("Execute"):
+    if st.button(_STR_BUTTON_EXECUTE):
         with sql.connect(f"file:{db_name}?mode=rwc", uri=True) as conn:
             if sql_stmts.strip().lower().startswith("select"):
                 df = pd.read_sql(sql_stmts, conn)
@@ -389,6 +389,9 @@ def _manage_db():
             else:
                 for sql_stmt in sql_stmts.split(";"):
                     if not sql_stmt.strip():
+                        continue
+                    if not _IS_ADMIN and _BAD_SQL.findall(sql_stmt.lower()):
+                        st.warning(f"SQL not allowed: '{sql_stmt}'")
                         continue
                     res = conn.execute(sql_stmt)
                     st.write(res)
@@ -399,17 +402,20 @@ def _manage_db():
                 # st.code(inspect.getsource(do_widget))
                 st.code(f.read()) 
 
+
 meta_dict = {
-    "Database": {"fn": _manage_db, "icon": "box"}, 
-    "Tables": {"fn": _manage_table, "icon": "file-spreadsheet"}, 
+    _STR_MENU_DATABASE: {"fn": _manage_db, "icon": "box"}, 
+    _STR_MENU_TABLES: {"fn": _manage_table, "icon": "file-spreadsheet"}, 
 }
 
+
+
 action_dict =  {
-    "View": {"fn": _view_record, "icon": "list-task"}, 
+    _STR_ACTION_VIEW: {"fn": _record__view, "icon": "list-task"}, 
+    _STR_ACTION_ADD: {"fn": _record__create, "icon": "plus-square"},
+    _STR_ACTION_EDIT: {"fn": _record__update, "icon": "pencil-square"},
+    _STR_ACTION_DELETE: {"fn": _record__delete, "icon": "shield-fill-x"},
     # "Search": {"fn": _search_record, "icon": "search"},
-    "Add": {"fn": _create_record, "icon": "plus-square"},
-    "Edit": {"fn": _update_record, "icon": "pencil-square"},
-    "Delete": {"fn": _delete_record, "icon": "shield-fill-x"},
 }
 # SQLite Full-text search requires creating separate virtual table
 # One may use trigger to populate the virtual table with data to search
@@ -417,15 +423,16 @@ action_dict =  {
 # where full_text has this format: [col_name_1] col_value_1; ...; [col_name_N] col_value_N
 # From search page, one links search result to its source table
 
+
 def do_sidebar():
     objects = list(meta_dict.keys())
     icons = [meta_dict[i]["icon"] for i in objects]
 
     with st.sidebar:
-        action = option_menu("Manage", objects, 
+        action = option_menu(_STR_MENU_TITLE, objects, 
             icons=icons, 
             menu_icon="columns-gap", 
-            default_index=objects.index("Database"),
+            default_index=objects.index(_STR_MENU_DATABASE),
             key="menu_action")
 
 
@@ -434,8 +441,8 @@ def do_sidebar():
             pass
         with c2:
 
-            db_name = st.text_input('SQLite database', value=_DB_NAME, key="db_name")    
-            if action == "Tables":            
+            db_name = st.text_input('SQLite database:', value=_DB_NAME, key="db_name")    
+            if action == _STR_MENU_TABLES:            
                 conn = sql.connect(f"file:{db_name}?mode=rw", uri=True)
                 df = pd.read_sql(_SQL_SELECT_TABLE_NAME, conn)
                 tables = df["name"].to_list()
@@ -446,17 +453,18 @@ def do_sidebar():
 
         st.image("https://user-images.githubusercontent.com/329928/155828764-b19a08e4-5346-4567-bba0-0ceeb5c2b241.png")
 
-        if st.checkbox('view code'):
-            with open(__file__) as f:
-                st.code(f.read())
+        if _IS_ADMIN:
+            if st.checkbox('view code'):
+                with open(__file__) as f:
+                    st.code(f.read())
 
 def do_body():
-    action = st.session_state["menu_action"] if "menu_action" in st.session_state and st.session_state["menu_action"] else "Database"
+    action = st.session_state["menu_action"] if "menu_action" in st.session_state and st.session_state["menu_action"] else _STR_MENU_DATABASE
 
     _log_msg(f"action={action}")
-    if action == "Database":
+    if action == _STR_MENU_DATABASE:
         meta_dict[action]["fn"]()
-    elif action == "Tables":
+    elif action == _STR_MENU_TABLES:
         table_name = st.session_state["table_name"] if "table_name" in st.session_state and st.session_state["table_name"] else "s_user"
         _log_msg(f"table_name={table_name}")
         meta_dict[action]["fn"](table_name)
