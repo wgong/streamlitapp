@@ -70,7 +70,7 @@ create table if not exists  s_feedback (
 create table if not exists  s_task (
     id INTEGER PRIMARY KEY,
     title UNIQUE ON CONFLICT REPLACE, 
-    category
+    category,
     notes,
 
     priority,
@@ -90,7 +90,7 @@ create table if not exists  s_task (
 create table if not exists  s_event (
     id INTEGER PRIMARY KEY,
     title UNIQUE ON CONFLICT REPLACE, 
-    category
+    category,
     notes,
 
     event_host,
