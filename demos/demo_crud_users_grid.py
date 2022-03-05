@@ -10,7 +10,6 @@ $ pip install streamlit streamlit-option-menu streamlit-aggrid
 
 
 ## TODO - streamlit-crud
-
 - parse table schema to get column name/type and build create/update form programmatically
 
 SELECT 
@@ -66,7 +65,7 @@ _FORM_CONFIG = {
     "delete": {"read_only": True, "key_pfx": "del", "selectable": True},
 }
 
-_DB_NAME = "journals.db"
+_DB_NAME = "notes.db"
 _FILE_SCHEMA = "schema_create.sql"
 _BAD_SQL_PAT = re.compile('\s*(drop|delete)\s+')
 _COLS_PAT = re.compile('\((.*)\)')
@@ -86,12 +85,12 @@ if os.path.exists(_FILE_SCHEMA):
     _SQL_CREATE_TABLES = open(_FILE_SCHEMA).read()
 else:
     _SQL_CREATE_TABLES = """
-create table if not exists s_user (
+create table if not exists t_user (
     id INTEGER PRIMARY KEY,
     username UNIQUE ON CONFLICT REPLACE, 
     password, 
     notes,
-    flag_admin
+    is_admin
 );
 """
 
@@ -217,7 +216,7 @@ def _form__read(key_pfx, table_name):
     # fetch form field values and store them into form_data dict
     _SCHEMA_DICT = _prepare_table_column_dict()
     form_data = {}
-    if table_name in ["s_user", "s_person"]:
+    if table_name in ["t_user", "t_person"]:
         for col in _SCHEMA_DICT[table_name]:
             form_key = _gen_key(key_pfx, table_name, col)
             form_data[col] = st.session_state[form_key] if form_key in st.session_state  else ""
@@ -229,11 +228,11 @@ def _form__clear(key_pfx, table_name):
     for col in _SCHEMA_DICT[table_name]:
         form_key = _gen_key(key_pfx, table_name, col)
         if form_key in st.session_state:
-            st.session_state[_gen_key(key_pfx, table_name, col)] = False if col.startswith("flag_") else ""
+            st.session_state[_gen_key(key_pfx, table_name, col)] = False if col.startswith("is_") else ""
 
-def _form__create(ctx, row=None):
+def _form__build(ctx, row=None):
     # create form for a given table
-    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "s_user"
+    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "t_user"
     key_pfx = _FORM_CONFIG[ctx]["key_pfx"]
     if ctx != "create":
         st.write(f'id: {_default_val(row, "id")}')
@@ -241,26 +240,29 @@ def _form__create(ctx, row=None):
     _disabled = _FORM_CONFIG[ctx]["read_only"]
     _log_msg(f"table_name={table_name}, key_pfx={key_pfx}, ctx={ctx}, disabled={_disabled}")
     # TODO - get ui hints from schema
-    if table_name == "s_user":
-        st.text_input("Username(*)", value=_default_val(row, "username"), key=_gen_key(key_pfx, table_name, "username"), disabled=_disabled)
+    if table_name == "t_user":
+        # user-key column is readonly for Update
+        st.text_input("Username(*)", value=_default_val(row, "username"), key=_gen_key(key_pfx, table_name, "username"), disabled=_disabled if ctx != "update" else True)
         st.text_input("Password(*)", value=_default_val(row, "password"), key=_gen_key(key_pfx, table_name, "password"), disabled=_disabled)
         st.text_area('Notes', value=_default_val(row, "notes"), key=_gen_key(key_pfx, table_name, "notes"), disabled=_disabled)
-        st.checkbox("Is admin?", value=_default_val(row, "flag_admin"), key=_gen_key(key_pfx, table_name, "flag_admin"), disabled=_disabled)
-    elif table_name == "s_person":
-        st.text_input("Full name(*)", value=_default_val(row, "full_name"), key=_gen_key(key_pfx, table_name, "full_name"), disabled=_disabled)
-        st.text_input("Email(s)", value=_default_val(row, "email"), key=_gen_key(key_pfx, table_name, "email"), disabled=_disabled)
-        st.text_input("Phone number(s)", value=_default_val(row, "phone"), key=_gen_key(key_pfx, table_name, "phone"), disabled=_disabled)
+        st.checkbox("Is admin?", value=_default_val(row, "is_admin"), key=_gen_key(key_pfx, table_name, "is_admin"), disabled=_disabled)
+    elif table_name == "t_person":
+        # user-key column is readonly for Update
+        st.text_input("Full name(*)", value=_default_val(row, "full_name"), key=_gen_key(key_pfx, table_name, "full_name"), disabled=_disabled if ctx != "update" else True)
+        st.text_input("Email", value=_default_val(row, "email"), key=_gen_key(key_pfx, table_name, "email"), disabled=_disabled)
+        st.text_input("Phone", value=_default_val(row, "phone"), key=_gen_key(key_pfx, table_name, "phone"), disabled=_disabled)
         st.text_area('Notes', value=_default_val(row, "notes"), key=_gen_key(key_pfx, table_name, "notes"), disabled=_disabled)
-        st.text_input("Twitter link", value=_default_val(row, "url_twit"), key=_gen_key(key_pfx, table_name, "url_twit"), disabled=_disabled)
-        st.text_input("Facebook link", value=_default_val(row, "url_fb"), key=_gen_key(key_pfx, table_name, "url_fb"), disabled=_disabled)
-        st.text_area('Address', value=_default_val(row, "address"), key=_gen_key(key_pfx, table_name, "address"), disabled=_disabled)
-        st.text_area('Related person(s)', value=_default_val(row, "related_persons"), key=_gen_key(key_pfx, table_name, "related_persons"), disabled=_disabled)
+        st.text_input("Twitter link", value=_default_val(row, "twitter_link"), key=_gen_key(key_pfx, table_name, "twitter_link"), disabled=_disabled)
+        st.text_input("Facebook link", value=_default_val(row, "facebook_link"), key=_gen_key(key_pfx, table_name, "facebook_link"), disabled=_disabled)
+        st.text_input("Linkedin link", value=_default_val(row, "linkedin_link"), key=_gen_key(key_pfx, table_name, "linkedin_link"), disabled=_disabled)
+        st.text_area('Addresses', value=_default_val(row, "addresses"), key=_gen_key(key_pfx, table_name, "addresses"), disabled=_disabled)
+        st.text_area('Related persons', value=_default_val(row, "related_persons"), key=_gen_key(key_pfx, table_name, "related_persons"), disabled=_disabled)
 
 def _onclick_create(*args, **kwargs):
     ## Create callback
     # st.write(f"kwargs: {kwargs}")
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
-    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "s_user"
+    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "t_user"
     key_pfx = kwargs.get("key_pfx")
     form_data = _form__read(key_pfx, table_name)
     if not form_data:
@@ -268,27 +270,30 @@ def _onclick_create(*args, **kwargs):
         return
 
     with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
-        if table_name == "s_user":
+        if table_name == "t_user":
             username, password = form_data["username"], form_data["password"]
             if username and password:
                 conn.execute(
                     f"""INSERT INTO {table_name} 
-                    (username, password, notes, flag_admin) 
+                    (username, password, notes, is_admin) 
                     VALUES(?,?,?,?)""",
-                    (username, _hash_it(password), form_data["notes"], form_data["flag_admin"]),
+                    (username, _hash_it(password), form_data["notes"], form_data["is_admin"]),
                 )
             else:
                 st.error(f"required inputs are missing")
 
-        elif table_name == "s_person":
+        elif table_name == "t_person":
             full_name = form_data["full_name"]
             if full_name:
                 conn.execute(
                     f"""INSERT INTO {table_name} 
-                    (full_name, email, phone, notes, url_twit, url_fb, address, related_persons) 
-                    VALUES(?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (full_name, email, phone, notes, 
+                    twitter_link, facebook_link, linkedin_link, 
+                    addresses, related_persons) 
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (full_name, form_data["email"], form_data["phone"], form_data["notes"], 
-                        form_data["url_twit"], form_data["url_fb"], form_data["address"], form_data["related_persons"]),
+                        form_data["twitter_link"], form_data["facebook_link"], form_data["linkedin_link"], 
+                        form_data["addresses"], form_data["related_persons"]),
                 )
             else:
                 st.error(f"required inputs are missing")
@@ -298,7 +303,7 @@ def _onclick_create(*args, **kwargs):
 def _onclick_update(*args, **kwargs):
     ## callback for Update
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
-    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "s_user"
+    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "t_user"
     key_pfx = kwargs.get("key_pfx")
     form_data = _form__read(key_pfx, table_name)  
     if not form_data:
@@ -306,21 +311,24 @@ def _onclick_update(*args, **kwargs):
         return
 
     with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
-        if table_name == "s_user":     
+        if table_name == "t_user":     
             conn.execute(
                     f"""UPDATE {table_name} 
-                    SET password = ?, notes = ?, flag_admin = ? 
+                    SET password = ?, notes = ?, is_admin = ? 
                     WHERE username = ?""", 
-                    (_hash_it(form_data["password"]),form_data["notes"],form_data["flag_admin"], 
+                    (_hash_it(form_data["password"]),form_data["notes"],form_data["is_admin"], 
                         form_data["username"])
                 )
-        elif table_name == "s_person":   
+        elif table_name == "t_person":   
             conn.execute(
                     f"""UPDATE {table_name} 
-                    SET email = ?, phone = ?, notes = ?, url_twit = ?, url_fb = ?, address = ? , related_persons = ?
+                    SET email = ?, phone = ?, notes = ?, 
+                    twitter_link = ?, facebook_link = ?, linkedin_link = ?, 
+                    addresses = ?, related_persons = ?
                     WHERE full_name = ?""", 
                     (form_data["email"], form_data["phone"], form_data["notes"], 
-                        form_data["url_twit"], form_data["url_fb"], form_data["address"], form_data["related_persons"], 
+                        form_data["twitter_link"], form_data["facebook_link"], form_data["linkedin_link"], 
+                        form_data["addresses"], form_data["related_persons"], 
                         form_data["full_name"])
                 )
 
@@ -329,7 +337,7 @@ def _onclick_update(*args, **kwargs):
 def _onclick_delete(*args, **kwargs):
     ## callback for Delete
     db_name = st.session_state["db_name"] if "db_name" in st.session_state else _DB_NAME
-    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "s_user"
+    table_name = st.session_state["table_name"] if "table_name" in st.session_state else "t_user"
     key_pfx = kwargs.get("key_pfx")
     form_data = _form__read(key_pfx, table_name)  
     if not form_data:
@@ -337,11 +345,11 @@ def _onclick_delete(*args, **kwargs):
         return
 
     with sql.connect(f"file:{db_name}?mode=rw", uri=True) as conn:
-        if table_name == "s_user":         
+        if table_name == "t_user":         
             conn.execute(
                     f"DELETE FROM {table_name} WHERE username = ?", (form_data["username"],)
                 )
-        elif table_name == "s_person":  
+        elif table_name == "t_person":  
             conn.execute(
                     f"DELETE FROM {table_name} WHERE full_name = ?", (form_data["full_name"],)
                 )
@@ -356,7 +364,7 @@ def _record__create(conn, table_name):
     key_pfx = _FORM_CONFIG[ctx]["key_pfx"]
     selected_df = _prepare_grid(conn, table_name, context=ctx)
     with st.form(key=_gen_key(key_pfx, table_name)): 
-        _form__create(ctx)
+        _form__build(ctx)
         st.form_submit_button(_STR_BUTTON_CREATE, on_click=_onclick_create, kwargs={"key_pfx": key_pfx})
 
 def _record__view(conn, table_name):
@@ -365,7 +373,7 @@ def _record__view(conn, table_name):
     if selected_df is not None:
         row = selected_df.to_dict()
         if row:
-            _form__create(ctx, row=row)
+            _form__build(ctx, row=row)
 
 def _record__update(conn, table_name):
     ctx = "update"
@@ -375,7 +383,7 @@ def _record__update(conn, table_name):
         row = selected_df.to_dict()
         if row:
             with st.form(key=_gen_key(key_pfx, table_name)):
-                _form__create(ctx, row=row)
+                _form__build(ctx, row=row)
                 st.form_submit_button(_STR_BUTTON_UPDATE, on_click=_onclick_update, kwargs={"key_pfx": key_pfx})
 
 def _record__delete(conn, table_name):
@@ -386,7 +394,7 @@ def _record__delete(conn, table_name):
         row = selected_df.to_dict()
         if row:
             with st.form(key=_gen_key(key_pfx, table_name)):
-                _form__create(ctx, row=row)
+                _form__build(ctx, row=row)
                 st.form_submit_button(_STR_BUTTON_DELETE, on_click=_onclick_delete, kwargs={"key_pfx": key_pfx})
 
 
@@ -477,7 +485,7 @@ def do_sidebar():
             if action == _STR_MENU_TABLES:            
                 tables = _prepare_table_list()
                 table_name = st.selectbox("Table:", tables, 
-                    index=tables.index("s_user"),
+                    index=tables.index("t_user"),
                     key="table_name")
 
 
@@ -500,7 +508,7 @@ def do_body():
 
 
     elif action == _STR_MENU_TABLES:
-        table_name = st.session_state["table_name"] if "table_name" in st.session_state and st.session_state["table_name"] else "s_user"
+        table_name = st.session_state["table_name"] if "table_name" in st.session_state and st.session_state["table_name"] else "t_user"
         _log_msg(f"table_name={table_name}")
         meta_dict[action]["fn"](table_name)
 
