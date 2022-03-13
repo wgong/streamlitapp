@@ -8,3 +8,4 @@ hydralit   # multi-page app
 # TA-Lib  # failed to install  
 mplfinance 
 yfinance
+vega_datasets
