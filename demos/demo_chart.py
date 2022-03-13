@@ -13,7 +13,7 @@ import pickle
 
 import yfinance as yf
 import mplfinance as mpf
-import talib as ta
+# import talib as ta
 
 import pandas as pd
 import numpy as np
@@ -61,6 +61,14 @@ def get_quotes(symbol, num_days=NUM_OF_DAYS_QUOTE, cache=False):
         pickle.dump(quote_data, open(FILE_CACHE_QUOTES, "wb"))
 
     return df
+
+def _MACD(data, fastperiod=12, slowperiod=26, signalperiod=9):
+    ema_fast = data["Close"].ewm(span=fastperiod).mean()
+    ema_slow = data["Close"].ewm(span=slowperiod).mean()
+    data["macd"] = ema_fast - ema_slow
+    data["macd_signal"] = data["macd"].ewm(span=signalperiod).mean()
+    data["macd_hist"] = data["macd"] - data["macd_signal"]
+    return data
 
 def do_dummy_item():
     st.title("dummy item")
@@ -135,7 +143,8 @@ def do_mpl():
     data['Volume'] = data['Volume'] / 1000000
 
     # macd
-    data["macd"], data["macd_signal"], data["macd_hist"] = ta.MACD(data['Close'])
+    data = _MACD(data)
+    # data["macd"], data["macd_signal"], data["macd_hist"] = ta.MACD(data['Close'])
 
     # macd panel
     colors = ['g' if v >= 0 else 'r' for v in data["macd_hist"]]

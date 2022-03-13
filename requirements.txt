@@ -5,6 +5,6 @@ streamlit-player
 htbuilder
 # streamlit_book  # ebook
 hydralit   # multi-page app
-TA-Lib 
+# TA-Lib  # failed to install  
 mplfinance 
 yfinance
