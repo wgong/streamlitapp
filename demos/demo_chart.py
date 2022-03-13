@@ -131,10 +131,10 @@ def _calculate_ta(df):
     df = _RSI(df)
     return df    
 
-# @st.cache(ttl=7200)
+@st.cache(ttl=7200)
 def _chart(ticker, chart_root=CHART_ROOT):
     try:
-        df = _get_quotes(ticker, cache=True)
+        df = _get_quotes(ticker)
     except:
         return "", format_exc()
     
