@@ -1,8 +1,11 @@
 """
 Streamlit app template
 
-The source code: 
-    https://github.com/wgong/streamlitapp/blob/main/template_sidebar_body.py
+- source: 
+    https://github.com/wgong/streamlitapp/blob/main/demos/demo_chart.py
+
+- app:
+    https://share.streamlit.io/wgong/streamlitapp/main/demos/demo_chart.py
 
 """
 
@@ -22,6 +25,7 @@ import mplfinance as mpf
 import altair as alt
 from vega_datasets import data
 import inspect
+from traceback import format_exc
 
 # Initial page config
 st.set_page_config(
@@ -33,9 +37,13 @@ st.set_page_config(
 _DUMMY_ITEM = "_____"
 
 MAX_NUM_TICKERS  = 20
-NUM_OF_DAYS_QUOTE = 400
-RSI_PERIOD, RSI_AVG = 200, 30
+NUM_DAYS_QUOTE = 450
+NUM_DAYS_PLOT = 300
+RSI_PERIOD, RSI_AVG = 150, 30
 MACD_FAST, MACD_SLOW, MACD_SIGNAL = 12, 26, 9
+MA_FAST, MA_SLOW, MA_LONG = 15, 50, 150
+EMA_SLOW_SCALE = 2.0 
+MA_VOL = 20
 
 CHART_ROOT = expanduser("~/charts")
 if not exists(CHART_ROOT):
@@ -45,10 +53,10 @@ FILE_CACHE_QUOTES = join(CHART_ROOT, "df_quotes_cache.pickle")
 ##############################################
 ## helper functions
 ##############################################
-def _download_quote(symbol, num_days=NUM_OF_DAYS_QUOTE):
+def _download_quote(symbol, num_days=NUM_DAYS_QUOTE):
     return yf.Ticker(symbol).history(f"{num_days}d")
 
-def _get_quotes(symbol, num_days=NUM_OF_DAYS_QUOTE, cache=False):
+def _get_quotes(symbol, num_days=NUM_DAYS_QUOTE, cache=False):
     """
     check cache:
         import pickle
@@ -106,37 +114,81 @@ def _RSI(df, n=RSI_PERIOD, rsi_avg=RSI_AVG, band_width=0.5):
     df["rsi_d"] = df['rsi_avg'] - band_width
     return df
 
+def _calculate_ta(df):
+    df["w_p"] = 0.25*(2*df["Close"] + df["High"] + df["Low"])
+    df["ema_slow"]  = df.w_p.ewm(span=MA_SLOW).mean()
 
-@st.cache(ttl=7200)
-def _chart(ticker, chart_root=CHART_ROOT):
-    try:
-        df = _get_quotes(ticker)
-    except:
-        return ""
-    
+    # range
+    h_l_mean25 = (df.High - df.Low).ewm(span=int(MA_SLOW/2)).mean()
+    df["ema_slow"] = df.w_p.ewm(span=MA_SLOW).mean()
+    df["ema_slow_u"] =  df.ema_slow + 0.5*h_l_mean25 * EMA_SLOW_SCALE
+    df["ema_slow_d"] =  df.ema_slow - 0.5*h_l_mean25 * EMA_SLOW_SCALE
+    df["ema_long"] = df.w_p.ewm(span=MA_LONG).mean()
+
     # trim volume to avoid exponential form
     df['Volume'] = df['Volume'] / 1000000
+    df["vol_avg"] = df.Volume.ewm(span=MA_VOL).mean()
+    df = _RSI(df)
+    return df    
 
-    # macd
-    df = _MACD(df)
-    # df["macd"], df["macd_signal"], df["macd_hist"] = ta.MACD(df['Close'])
+# @st.cache(ttl=7200)
+def _chart(ticker, chart_root=CHART_ROOT):
+    try:
+        df = _get_quotes(ticker, cache=True)
+    except:
+        return "", format_exc()
+    
+    df = _calculate_ta(df)
+    df = df.iloc[-NUM_DAYS_PLOT:, :]  # slice after done with calculating TA   
 
-    # macd panel
-    colors = ['g' if v >= 0 else 'r' for v in df["macd_hist"]]
-    macd_plot = mpf.make_addplot(df["macd"], panel=1, color='fuchsia', title="MACD")
-    macd_hist_plot = mpf.make_addplot(df["macd_hist"], type='bar', panel=1, color=colors) # color='dimgray'
-    macd_signal_plot = mpf.make_addplot(df["macd_signal"], panel=1, color='b')
+    # # macd panel
+    # df = _MACD(df)
+    # # df["macd"], df["macd_signal"], df["macd_hist"] = ta.MACD(df['Close'])
+    # colors = ['g' if v >= 0 else 'r' for v in df["macd_hist"]]
+    # macd_plot = mpf.make_addplot(df["macd"], panel=1, color='fuchsia', title="MACD")
+    # macd_hist_plot = mpf.make_addplot(df["macd_hist"], type='bar', panel=1, color=colors) # color='dimgray'
+    # macd_signal_plot = mpf.make_addplot(df["macd_signal"], panel=1, color='b')
+
+    # candle overlay
+    ema_slow_plot = mpf.make_addplot(df["ema_slow"], panel=0, color='red', linestyle="dashed")
+    ema_slow_u_plot = mpf.make_addplot(df["ema_slow_u"], panel=0, color='b')
+    ema_slow_d_plot = mpf.make_addplot(df["ema_slow_d"], panel=0, color='b')
+    ema_long_plot = mpf.make_addplot(df["ema_long"], panel=0, color='green')
+    
+    # RSI
+    rsi_plot = mpf.make_addplot(df["rsi"], panel=1, color='black', width=1, title=f"{ticker} - RSI")
+    rsi_avg_plot = mpf.make_addplot(df["rsi_avg"], panel=1, color='red', linestyle="dashed")
+    rsi_u_plot = mpf.make_addplot(df["rsi_u"], panel=1, color='b')
+    rsi_d_plot = mpf.make_addplot(df["rsi_d"], panel=1, color='b')
+    
+    # volume
+    vol_avg_plot = mpf.make_addplot(df["vol_avg"], panel=2, color='k')
 
     # plot
-    plots = [macd_plot, macd_signal_plot, macd_hist_plot]
+    plots = [
+        # panel-0
+        ema_slow_plot, ema_slow_u_plot, ema_slow_d_plot, ema_long_plot 
+        #,macd_plot, macd_signal_plot, macd_hist_plot, 
+        # panel-1
+        ,rsi_plot, rsi_avg_plot, rsi_u_plot, rsi_d_plot 
+        # panel-2
+        ,vol_avg_plot                                   
+    ]
+    # custom style
+    # https://stackoverflow.com/questions/68296296/customizing-mplfinance-plot-python
+    
     file_png = join(chart_root, f"{ticker}.png")
-    mpf.plot(df, type='candle', style='yahoo', 
-            mav=(20,50,150), addplot=plots, 
-            title=f"{ticker}", 
+    mpf.plot(df, type='candle', 
+            style='yahoo', 
+            panel_ratios=(4,3,1),
+            mav=(MA_FAST), addplot=plots, 
+            # title=f"{ticker}", 
             volume=True, volume_panel=2, 
             ylabel="", ylabel_lower='',
             datetime_format='%m-%d',
-            savefig=file_png
+            savefig=file_png,
+            figsize=(10,8),
+            show_nontrading=True
         )
     return file_png
 
@@ -204,7 +256,8 @@ def do_candlestick():
     try:
         st.altair_chart(base, use_container_width=True) 
     except:
-        pass   
+        pass
+        # st.error(format_exc())
 
 
 def do_hist():
@@ -230,7 +283,7 @@ def do_mpl_chart():
                 images[ticker] = file_img
                 st.image(file_img)
         except:
-            st.error(f"invalid ticker: {ticker}")
+            st.error(f"invalid ticker: {ticker}\n{format_exc()}")
         
     # st.json(images)
     
