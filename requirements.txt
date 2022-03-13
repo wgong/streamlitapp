@@ -5,3 +5,6 @@ streamlit-player
 htbuilder
 # streamlit_book  # ebook
 hydralit   # multi-page app
+TA-Lib 
+mplfinance 
+yfinance
