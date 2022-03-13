@@ -40,8 +40,8 @@ def get_quotes(symbol, num_days=NUM_OF_DAYS_QUOTE, cache=False):
     """
     check cache:
         import pickle
-        data = pickle.load(open("df_quotes_cache.pickle", "rb"))
-        data.keys()
+        df = pickle.load(open("df_quotes_cache.pickle", "rb"))
+        df.keys()
     """
     if not cache:
         return download_quote(symbol, num_days=num_days)
@@ -62,13 +62,13 @@ def get_quotes(symbol, num_days=NUM_OF_DAYS_QUOTE, cache=False):
 
     return df
 
-def _MACD(data, fastperiod=12, slowperiod=26, signalperiod=9):
-    ema_fast = data["Close"].ewm(span=fastperiod).mean()
-    ema_slow = data["Close"].ewm(span=slowperiod).mean()
-    data["macd"] = ema_fast - ema_slow
-    data["macd_signal"] = data["macd"].ewm(span=signalperiod).mean()
-    data["macd_hist"] = data["macd"] - data["macd_signal"]
-    return data
+def _MACD(df, fastperiod=12, slowperiod=26, signalperiod=9):
+    ema_fast = df["Close"].ewm(span=fastperiod).mean()
+    ema_slow = df["Close"].ewm(span=slowperiod).mean()
+    df["macd"] = ema_fast - ema_slow
+    df["macd_signal"] = df["macd"].ewm(span=signalperiod).mean()
+    df["macd_hist"] = df["macd"] - df["macd_signal"]
+    return df
 
 def do_dummy_item():
     st.title("dummy item")
@@ -136,34 +136,44 @@ def do_hist():
     ) 
     st.altair_chart(h, use_container_width=True)
 
-def do_mpl():
-    ticker_name = "QQQ"
-    data = get_quotes(ticker_name, cache=True)
+@st.cache(ttl=7200)
+def _chart(ticker):
+    df = get_quotes(ticker, cache=True)
     # trim volume to avoid exponential form
-    data['Volume'] = data['Volume'] / 1000000
+    df['Volume'] = df['Volume'] / 1000000
 
     # macd
-    data = _MACD(data)
-    # data["macd"], data["macd_signal"], data["macd_hist"] = ta.MACD(data['Close'])
+    df = _MACD(df)
+    # df["macd"], df["macd_signal"], df["macd_hist"] = ta.MACD(df['Close'])
 
     # macd panel
-    colors = ['g' if v >= 0 else 'r' for v in data["macd_hist"]]
-    macd_plot = mpf.make_addplot(data["macd"], panel=1, color='fuchsia', title="MACD")
-    macd_hist_plot = mpf.make_addplot(data["macd_hist"], type='bar', panel=1, color=colors) # color='dimgray'
-    macd_signal_plot = mpf.make_addplot(data["macd_signal"], panel=1, color='b')
+    colors = ['g' if v >= 0 else 'r' for v in df["macd_hist"]]
+    macd_plot = mpf.make_addplot(df["macd"], panel=1, color='fuchsia', title="MACD")
+    macd_hist_plot = mpf.make_addplot(df["macd_hist"], type='bar', panel=1, color=colors) # color='dimgray'
+    macd_signal_plot = mpf.make_addplot(df["macd_signal"], panel=1, color='b')
 
     # plot
     plots = [macd_plot, macd_signal_plot, macd_hist_plot]
-    file_png = os.path.expanduser(os.path.join("~", f"{ticker_name}.png"))
-    mpf.plot(data, type='candle', style='yahoo', 
-            mav=(50,100,200), addplot=plots, 
-            title=f"{ticker_name}", volume=True, volume_panel=2, 
-            ylabel='', ylabel_lower='',
+    file_png = os.path.expanduser(os.path.join("~", f"{ticker}.png"))
+    mpf.plot(df, type='candle', style='yahoo', 
+            mav=(20,50,150), addplot=plots, 
+            title=f"{ticker}", 
+            volume=True, volume_panel=2, 
+            ylabel="", ylabel_lower='',
             datetime_format='%m-%d',
             savefig=file_png
         )
-    st.image(file_png)
-
+    return file_png
+    
+def do_mpl():
+    images = {}
+    tickers = st.text_input('Enter ticker(s)', "QQQ") 
+    for ticker in tickers.split()[:10]:
+        ticker = ticker.upper()
+        images[ticker] = _chart(ticker)
+        st.image(images[ticker])
+        
+    st.json(images)
 
 #####################################################
 # menu_items
@@ -181,8 +191,8 @@ def do_body():
     menu_dict[menu_item]["fn"]()
 
 
-    if st.checkbox('Show code ...', key="do_body"):
-        st.code(inspect.getsource(do_body))
+    # if st.checkbox('Show code ...', key="do_body"):
+    #     st.code(inspect.getsource(do_body))
 
 def do_sidebar():
 
@@ -191,8 +201,8 @@ def do_sidebar():
     menu_item = st.sidebar.selectbox("Select: ", menu_options, index=default_ix, key="menu_item")
 
 
-    if st.sidebar.checkbox('Show code ...', key="do_sidebar"):
-        st.sidebar.code(inspect.getsource(do_sidebar))
+    # if st.sidebar.checkbox('Show code ...', key="do_sidebar"):
+    #     st.sidebar.code(inspect.getsource(do_sidebar))
 
 
 def main():
