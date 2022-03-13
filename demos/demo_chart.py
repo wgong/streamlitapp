@@ -10,6 +10,7 @@ import streamlit as st
 
 import os.path
 import pickle
+import glob
 
 import yfinance as yf
 import mplfinance as mpf
@@ -29,7 +30,7 @@ st.set_page_config(
      initial_sidebar_state="expanded",
 )
 
-
+MAX_NUM_TICKERS  = 20
 NUM_OF_DAYS_QUOTE = 400
 FILE_CACHE_QUOTES = os.path.expanduser("~/df_quotes_cache.pickle")
 
@@ -73,7 +74,7 @@ def _MACD(df, fastperiod=12, slowperiod=26, signalperiod=9):
 def do_dummy_item():
     st.title("dummy item")
 
-def do_chart_1():
+def do_alt_chart():
 
     df = pd.DataFrame(
         np.random.randn(200, 3),
@@ -138,7 +139,11 @@ def do_hist():
 
 @st.cache(ttl=7200)
 def _chart(ticker):
-    df = get_quotes(ticker, cache=True)
+    try:
+        df = get_quotes(ticker)
+    except:
+        return ""
+    
     # trim volume to avoid exponential form
     df['Volume'] = df['Volume'] / 1000000
 
@@ -154,7 +159,7 @@ def _chart(ticker):
 
     # plot
     plots = [macd_plot, macd_signal_plot, macd_hist_plot]
-    file_png = os.path.expanduser(os.path.join("~", f"{ticker}.png"))
+    file_png = os.path.expanduser(os.path.join("~", f"chart_{ticker}.png"))
     mpf.plot(df, type='candle', style='yahoo', 
             mav=(20,50,150), addplot=plots, 
             title=f"{ticker}", 
@@ -164,25 +169,46 @@ def _chart(ticker):
             savefig=file_png
         )
     return file_png
-    
-def do_mpl():
+
+def _parse_tickers(s):
+    tmp = {}
+    s = s.replace(",", " ")
+    for t in s.split():
+        tmp[t.upper()] = 1
+    return list(tmp.keys())
+
+def do_mpl_chart():
     images = {}
     tickers = st.text_input('Enter ticker(s)', "QQQ") 
-    for ticker in tickers.split()[:10]:
-        ticker = ticker.upper()
-        images[ticker] = _chart(ticker)
-        st.image(images[ticker])
+    for ticker in _parse_tickers(tickers)[:MAX_NUM_TICKERS]:
+        try:
+            file_img = _chart(ticker)
+            if file_img:
+                images[ticker] = file_img
+                st.image(file_img)
+        except:
+            st.error(f"invalid ticker: {ticker}")
         
-    st.json(images)
+    # st.json(images)
+    
+def do_review():
+    dir = os.path.expanduser("~")
+    files = [f for f in os.listdir(os.path.expanduser("~")) if f.startswith("chart_") and f.endswith(".png")]
+    tickers = [i.replace("chart_", "").replace(".png", "") for i in files]
+    selected_tickers = st.multiselect("Select tickers", tickers, [])
+    for ticker in selected_tickers:
+        file_png = os.path.expanduser(os.path.join("~", f"chart_{ticker}.png"))
+        st.image(file_png)
 
 #####################################################
 # menu_items
 menu_dict = {
     _DUMMY_ITEM : {"fn": do_dummy_item},
-    "altchart-1": {"fn": do_chart_1},
-    "candlestick": {"fn": do_candlestick},
+    "altchart": {"fn": do_alt_chart},
     "histogram": {"fn": do_hist},
-    "mplfinance": {"fn": do_mpl},
+    "candlestick": {"fn": do_candlestick},
+    "mplfinance": {"fn": do_mpl_chart},
+    "review": {"fn": do_review},
 }
 
 # body
