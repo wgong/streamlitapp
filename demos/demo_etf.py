@@ -1,11 +1,12 @@
 """
 Streamlit ETF app
 
-- source: 
-    https://github.com/wgong/streamlitapp/blob/main/demos/demo_etf.py
+# source: 
+    - https://github.com/wgong/streamlitapp/blob/main/demos/demo_etf.py
 
-- app:
-    https://share.streamlit.io/wgong/streamlitapp/main/demos/demo_etf.py
+# app:
+    - http://etf.s8s.cloud/
+    - https://share.streamlit.io/wgong/streamlitapp/main/demos/demo_etf.py
 
 """
 
