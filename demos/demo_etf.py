@@ -354,7 +354,7 @@ def do_mpl_chart():
     """ chart new ticker
     """
     images = {}
-    tickers = st.text_input(f'Enter ticker(s) (max {MAX_NUM_TICKERS})', "QQQ,SPY") 
+    tickers = st.text_input(f'Enter ticker(s) (max {MAX_NUM_TICKERS})', "SPY") 
     for ticker in _parse_tickers(tickers)[:MAX_NUM_TICKERS]:
         try:
             file_img = _chart(ticker)
