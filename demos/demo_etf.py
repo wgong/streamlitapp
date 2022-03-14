@@ -9,7 +9,6 @@ Streamlit ETF app
 
 """
 
-
 import streamlit as st
 
 from os import mkdir, listdir
@@ -35,8 +34,11 @@ MAX_NUM_TICKERS  = 20
 NUM_DAYS_QUOTE = 450
 NUM_DAYS_PLOT = 300
 RSI_PERIOD, RSI_AVG = 150, 30
+RSI_BAND_WIDTH = 0.6
+
 MACD_FAST, MACD_SLOW, MACD_SIGNAL = 12, 26, 9
-MA_FAST, MA_SLOW, MA_LONG = 15, 50, 150
+EMA_FAST, EMA_SLOW, EMA_LONG = 15, 50, 150
+EMA_FAST_SCALE = 1.1  # EMA10 band half-width factor
 EMA_SLOW_SCALE = 2.0 
 MA_VOL = 20
 
@@ -54,8 +56,7 @@ _STR_CHART = "chart"
 _STR_ETF_CHART = "ETF chart"
 _STR_REVIEW_CHART = "review chart"
 _STR_ETF_DATA = "ETF data"
-_STR_APP_NAME = "MplFinance App"
-
+_STR_APP_NAME = "Mplfinance App"
 
 
 ##############################################
@@ -67,6 +68,13 @@ def _parse_tickers(s):
     for t in s.split():
         tmp[t.upper()] = 1
     return list(tmp.keys())
+
+def _title_xy(ticker):
+    # position title manually
+    return {"title": f"{ticker}",  "x": 0.125, "y": 0.93}
+
+def _finviz_chart_url(ticker, period="d"):
+    return f"https://finviz.com/quote.ashx?t={ticker}&p={period}"
 
 def _download_quote(symbol, num_days=NUM_DAYS_QUOTE):
     return yf.Ticker(symbol).history(f"{num_days}d")
@@ -105,7 +113,7 @@ def _ta_MACD(df, fast_period=MACD_FAST, slow_period=MACD_SLOW, signal_period=MAC
     df["macd_hist"] = df["macd"] - df["macd_signal"]
     return df
 
-def _ta_RSI(df, n=RSI_PERIOD, rsi_avg=RSI_AVG, band_width=0.5):
+def _ta_RSI(df, n=RSI_PERIOD, rsi_avg=RSI_AVG, band_width=RSI_BAND_WIDTH):
     # https://github.com/wgong/mplfinance/blob/master/examples/rsi.py
     diff = df.w_p.diff().values
     gains = diff
@@ -131,14 +139,18 @@ def _ta_RSI(df, n=RSI_PERIOD, rsi_avg=RSI_AVG, band_width=0.5):
 
 def _calculate_ta(df):
     df["w_p"] = 0.25*(2*df["Close"] + df["High"] + df["Low"])
-    df["ema_slow"]  = df.w_p.ewm(span=MA_SLOW).mean()
+    df["ema_fast"]  = df.w_p.ewm(span=EMA_FAST).mean()
+    df["ema_slow"]  = df.w_p.ewm(span=EMA_SLOW).mean()
+    df["ema_long"] = df.w_p.ewm(span=EMA_LONG).mean()
 
     # range
-    h_l_mean25 = (df.High - df.Low).ewm(span=int(MA_SLOW/2)).mean()
-    df["ema_slow"] = df.w_p.ewm(span=MA_SLOW).mean()
-    df["ema_slow_u"] =  df.ema_slow + 0.5*h_l_mean25 * EMA_SLOW_SCALE
-    df["ema_slow_d"] =  df.ema_slow - 0.5*h_l_mean25 * EMA_SLOW_SCALE
-    df["ema_long"] = df.w_p.ewm(span=MA_LONG).mean()
+    hl_mean_fast = (df.High - df.Low).ewm(span=int(EMA_FAST/2)).mean()
+    df["ema_fast_u"] =  df.ema_fast + 0.5*hl_mean_fast * EMA_FAST_SCALE
+    df["ema_fast_d"] =  df.ema_fast - 0.5*hl_mean_fast * EMA_FAST_SCALE
+
+    hl_mean_slow = (df.High - df.Low).ewm(span=int(EMA_SLOW/2)).mean()
+    df["ema_slow_u"] =  df.ema_slow + 0.5*hl_mean_slow * EMA_SLOW_SCALE
+    df["ema_slow_d"] =  df.ema_slow - 0.5*hl_mean_slow * EMA_SLOW_SCALE
 
     # trim volume to avoid exponential form
     df['Volume'] = df['Volume'] / 1000000
@@ -165,13 +177,17 @@ def _chart(ticker, chart_root=CHART_ROOT):
     # macd_signal_plot = mpf.make_addplot(df["macd_signal"], panel=1, color='b')
 
     # candle overlay
+    light_black = '#404040'
+    # ema_fast_plot = mpf.make_addplot(df["ema_fast"], panel=0, color='c', linestyle="dashed")
+    ema_fast_u_plot = mpf.make_addplot(df["ema_fast_u"], panel=0, color=light_black)
+    ema_fast_d_plot = mpf.make_addplot(df["ema_fast_d"], panel=0, color=light_black)
     ema_slow_plot = mpf.make_addplot(df["ema_slow"], panel=0, color='red', linestyle="dashed")
     ema_slow_u_plot = mpf.make_addplot(df["ema_slow_u"], panel=0, color='b')
     ema_slow_d_plot = mpf.make_addplot(df["ema_slow_d"], panel=0, color='b')
     ema_long_plot = mpf.make_addplot(df["ema_long"], panel=0, color='green')
     
     # RSI
-    rsi_plot = mpf.make_addplot(df["rsi"], panel=1, color='black', width=1, title=f"{ticker} - RSI")
+    rsi_plot = mpf.make_addplot(df["rsi"], panel=1, color='black', width=1, title="RSI")
     rsi_avg_plot = mpf.make_addplot(df["rsi_avg"], panel=1, color='red', linestyle="dashed")
     rsi_u_plot = mpf.make_addplot(df["rsi_u"], panel=1, color='b')
     rsi_d_plot = mpf.make_addplot(df["rsi_d"], panel=1, color='b')
@@ -182,12 +198,13 @@ def _chart(ticker, chart_root=CHART_ROOT):
     # plot
     plots = [
         # panel-0
+        ema_fast_u_plot, ema_fast_d_plot, 
         ema_slow_plot, ema_slow_u_plot, ema_slow_d_plot, ema_long_plot 
         #,macd_plot, macd_signal_plot, macd_hist_plot, 
         # panel-1
         ,rsi_plot, rsi_avg_plot, rsi_u_plot, rsi_d_plot 
         # panel-2
-        ,vol_avg_plot                                   
+        ,vol_avg_plot                              
     ]
     # custom style
     # https://stackoverflow.com/questions/68296296/customizing-mplfinance-plot-python
@@ -196,13 +213,15 @@ def _chart(ticker, chart_root=CHART_ROOT):
     mpf.plot(df, type='candle', 
             style='yahoo', 
             panel_ratios=(4,3,1),
-            mav=(MA_FAST), addplot=plots, 
-            # title=f"{ticker}", 
+            # mav=(EMA_FAST), 
+            addplot=plots, 
+            title=_title_xy(ticker),
             volume=True, volume_panel=2, 
             ylabel="", ylabel_lower='',
             datetime_format='%m-%d',
             savefig=file_png,
             figsize=(10,8),
+            tight_layout=True,
             show_nontrading=True
         )
     return file_png
@@ -319,16 +338,16 @@ etf_df, etf_sectors, etf_dict = _load_etf_df()
 ## st handlers
 ##############################################
 
-def do_dummy_item():
-    st.title("Welcome")
+def go_home():
+    st.subheader("Welcome")
     st.markdown("""
     This app is built on 
     - [yahoo-finance](https://github.com/ranaroussi/yfinance) for datafeed
     - [pandas](https://github.com/pandas-dev/pandas) for data-processing & analysis
     - [mplfinance](https://github.com/matplotlib/mplfinance) for charting
-    - [streamlit](https://github.com/streamlit): an easy web-framework
+    - [streamlit](https://github.com/streamlit) (an easy framework) for data application
     
-    See [source code](https://github.com/wgong/streamlitapp/blob/main/demos/demo_etf.py)
+    View [source code](https://github.com/wgong/streamlitapp/blob/main/demos/demo_etf.py)
     """)
     
 def do_mpl_chart():
@@ -342,23 +361,26 @@ def do_mpl_chart():
             if file_img:
                 images[ticker] = file_img
                 st.image(file_img)
+                st.markdown(f"[{ticker}]({_finviz_chart_url(ticker)})", unsafe_allow_html=True)
+
         except:
             st.error(f"invalid ticker: {ticker}\n{format_exc()}")
-        
-    # st.json(images)
+
 
 def do_review(chart_root=CHART_ROOT):
     """ review existing charts
     """
     files = [f for f in listdir(chart_root) if f.endswith(".png")]
-    tickers = [i.replace(".png", "") for i in files]
+    tickers = sorted([i.replace(".png", "") for i in files])
     selected_tickers = st.multiselect("Select tickers", tickers, [])
     for ticker in selected_tickers:
         file_png = join(chart_root, f"{ticker}.png")
         st.image(file_png)
+        st.markdown(f"[{ticker}]({_finviz_chart_url(ticker)})", unsafe_allow_html=True)
 
 def do_show_etf_data():
     st.dataframe(etf_df)
+
 
 def do_show_etf_chart():
     """ ETF charts
@@ -370,7 +392,7 @@ def do_show_etf_chart():
         st.subheader(sect)
         for k,v in etf_dict[sect].items():
             st.image(f"https://finviz.com/chart.ashx?t={k}&p={period}")
-            st.markdown(f" [{k}](https://finviz.com/quote.ashx?t={k}&p={period}) : {v} ", unsafe_allow_html=True)
+            st.markdown(f" [{k}]({_finviz_chart_url(k, period)}) : {v} ", unsafe_allow_html=True)
             # don't know how to get futures chart img
 
 
@@ -379,7 +401,7 @@ def do_show_etf_chart():
 #####################################################
 
 menu_dict = {
-    _STR_HOME : {"fn": do_dummy_item},
+    _STR_HOME : {"fn": go_home},
     _STR_CHART: {"fn": do_mpl_chart},
     _STR_REVIEW_CHART: {"fn": do_review},
     _STR_ETF_CHART: {"fn": do_show_etf_chart},
@@ -403,13 +425,6 @@ def do_sidebar():
 
             with col_period:
                 st.selectbox('Period:', list(PERIOD_DICT.keys()), index=0, key="period")
-
-
-# @st.cache(ttl=3600, suppress_st_warning=True)
-# def _show_chart_img(ticker, period):
-#     st.image(f"https://finviz.com/chart.ashx?t={ticker}&p={period}")
-
-  
 
 # body
 def do_body():
