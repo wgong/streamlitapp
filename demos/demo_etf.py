@@ -12,8 +12,8 @@ Streamlit ETF app
 
 import streamlit as st
 
-from os import mkdir, listdir
-from os.path import exists, join, expanduser
+from PIL import Image
+from pathlib import Path
 import pickle
 from traceback import format_exc
 
@@ -33,7 +33,7 @@ st.set_page_config(
 # settings 
 MAX_NUM_TICKERS  = 20
 NUM_DAYS_QUOTE = 450
-NUM_DAYS_PLOT = 300
+NUM_DAYS_PLOT = 250
 RSI_PERIOD, RSI_AVG = 150, 30
 RSI_BAND_WIDTH = 0.6
 
@@ -43,10 +43,10 @@ EMA_FAST_SCALE = 1.1  # EMA10 band half-width factor
 EMA_SLOW_SCALE = 2.0 
 MA_VOL = 20
 
-CHART_ROOT = expanduser("~/charts")
-if not exists(CHART_ROOT):
-    mkdir(CHART_ROOT)
-FILE_CACHE_QUOTES = join(CHART_ROOT, "df_quotes_cache.pickle")
+CHART_ROOT = Path.home() / "charts"
+if not Path.exists(CHART_ROOT):
+    Path.mkdir(CHART_ROOT)
+FILE_CACHE_QUOTES = Path.joinpath(CHART_ROOT, "df_quotes_cache.pickle")
 
 DEFAULT_SECTORS = ['Equity Index']
 PERIOD_DICT = {"daily":"d", "weekly":"w", "monthly":"m"}
@@ -90,7 +90,7 @@ def _get_quotes(symbol, num_days=NUM_DAYS_QUOTE, cache=False):
     if not cache:
         return _download_quote(symbol, num_days=num_days)
         
-    if exists(FILE_CACHE_QUOTES):
+    if Path.exists(FILE_CACHE_QUOTES):
         quote_data = pickle.load(open(FILE_CACHE_QUOTES, "rb"))
         if symbol in quote_data and num_days == quote_data[symbol]["num_days"]:
             df = quote_data[symbol]["df"]
@@ -114,7 +114,7 @@ def _ta_MACD(df, fast_period=MACD_FAST, slow_period=MACD_SLOW, signal_period=MAC
     df["macd_hist"] = df["macd"] - df["macd_signal"]
     return df
 
-def _ta_RSI(df, n=RSI_PERIOD, rsi_avg=RSI_AVG, band_width=RSI_BAND_WIDTH):
+def _ta_RSI(df, n=RSI_PERIOD, avg_period=RSI_AVG, band_width=RSI_BAND_WIDTH):
     # https://github.com/wgong/mplfinance/blob/master/examples/rsi.py
     diff = df.w_p.diff().values
     gains = diff
@@ -132,16 +132,17 @@ def _ta_RSI(df, n=RSI_PERIOD, rsi_avg=RSI_AVG, band_width=RSI_BAND_WIDTH):
     for i,v in enumerate(losses[n:],n):
         l = losses[i] = ni*v + m*l
     rs = gains / losses
+    df["rsi_50"] = 50
     df['rsi'] = 100 - (100/(1+rs))
-    df["rsi_avg"] = df.rsi.ewm(span=rsi_avg).mean()
+    df["rsi_avg"] = df.rsi.ewm(span=avg_period).mean()
     df["rsi_u"] = df["rsi_avg"] + band_width
     df["rsi_d"] = df['rsi_avg'] - band_width
     return df
 
 def _calculate_ta(df):
     df["w_p"] = 0.25*(2*df["Close"] + df["High"] + df["Low"])
-    df["ema_fast"]  = df.w_p.ewm(span=EMA_FAST).mean()
-    df["ema_slow"]  = df.w_p.ewm(span=EMA_SLOW).mean()
+    df["ema_fast"] = df.w_p.ewm(span=EMA_FAST).mean()
+    df["ema_slow"] = df.w_p.ewm(span=EMA_SLOW).mean()
     df["ema_long"] = df.w_p.ewm(span=EMA_LONG).mean()
 
     # range
@@ -159,7 +160,7 @@ def _calculate_ta(df):
     df = _ta_RSI(df)
     return df    
 
-@st.cache(ttl=7200)
+# @st.cache(ttl=7200)
 def _chart(ticker, chart_root=CHART_ROOT):
     try:
         df = _get_quotes(ticker)
@@ -180,18 +181,29 @@ def _chart(ticker, chart_root=CHART_ROOT):
     # candle overlay
     light_black = '#404040'
     # ema_fast_plot = mpf.make_addplot(df["ema_fast"], panel=0, color='c', linestyle="dashed")
-    ema_fast_u_plot = mpf.make_addplot(df["ema_fast_u"], panel=0, color=light_black)
-    ema_fast_d_plot = mpf.make_addplot(df["ema_fast_d"], panel=0, color=light_black)
+    ema_fast_u_plot = mpf.make_addplot(df["ema_fast_u"], panel=0, color=light_black, linestyle="dotted")
+    ema_fast_d_plot = mpf.make_addplot(df["ema_fast_d"], panel=0, color=light_black, linestyle="dotted")
     ema_slow_plot = mpf.make_addplot(df["ema_slow"], panel=0, color='red', linestyle="dashed")
     ema_slow_u_plot = mpf.make_addplot(df["ema_slow_u"], panel=0, color='b')
     ema_slow_d_plot = mpf.make_addplot(df["ema_slow_d"], panel=0, color='b')
     ema_long_plot = mpf.make_addplot(df["ema_long"], panel=0, color='green')
     
     # RSI
-    rsi_plot = mpf.make_addplot(df["rsi"], panel=1, color='black', width=1, title="RSI")
-    rsi_avg_plot = mpf.make_addplot(df["rsi_avg"], panel=1, color='red', linestyle="dashed")
-    rsi_u_plot = mpf.make_addplot(df["rsi_u"], panel=1, color='b')
-    rsi_d_plot = mpf.make_addplot(df["rsi_d"], panel=1, color='b')
+    # make sure ylim are the same
+    rsi_min = df.min(axis=0)[["rsi"]].min()
+    rsi_max = df.max(axis=0)[["rsi"]].max()
+    rsi_50_color = "#F0DC16"  # yellow
+    if rsi_min >= 50:
+        df["rsi_50"] = rsi_min
+        rsi_50_color = "g"
+    if rsi_max <= 50:
+        df["rsi_50"] = rsi_max
+        rsi_50_color = "r"
+    rsi_50_plot = mpf.make_addplot(df["rsi_50"], panel=1, color=rsi_50_color, width=3, linestyle="solid", ylim=(rsi_min,rsi_max))
+    rsi_plot = mpf.make_addplot(df["rsi"], panel=1, color='black', width=1, title="RSI", ylim=(rsi_min,rsi_max))
+    rsi_avg_plot = mpf.make_addplot(df["rsi_avg"], panel=1, color='red', linestyle="dashed", ylim=(rsi_min,rsi_max))
+    rsi_u_plot = mpf.make_addplot(df["rsi_u"], panel=1, color='b', ylim=(rsi_min,rsi_max))
+    rsi_d_plot = mpf.make_addplot(df["rsi_d"], panel=1, color='b', ylim=(rsi_min,rsi_max))
     
     # volume
     vol_avg_plot = mpf.make_addplot(df["vol_avg"], panel=2, color='k')
@@ -203,14 +215,14 @@ def _chart(ticker, chart_root=CHART_ROOT):
         ema_slow_plot, ema_slow_u_plot, ema_slow_d_plot, ema_long_plot 
         #,macd_plot, macd_signal_plot, macd_hist_plot, 
         # panel-1
-        ,rsi_plot, rsi_avg_plot, rsi_u_plot, rsi_d_plot 
+        , rsi_50_plot,rsi_plot, rsi_avg_plot, rsi_u_plot, rsi_d_plot 
         # panel-2
         ,vol_avg_plot                              
     ]
     # custom style
     # https://stackoverflow.com/questions/68296296/customizing-mplfinance-plot-python
     
-    file_png = join(chart_root, f"{ticker}.png")
+    file_png = Path.joinpath(chart_root, f"{ticker}.png")
     mpf.plot(df, type='candle', 
             style='yahoo', 
             panel_ratios=(4,3,1),
@@ -221,10 +233,13 @@ def _chart(ticker, chart_root=CHART_ROOT):
             ylabel="", ylabel_lower='',
             datetime_format='%m-%d',
             savefig=file_png,
-            figsize=(10,8),
+            figsize=(16,8),
             tight_layout=True,
             show_nontrading=True
         )
+    # # del [df]   # remove df
+    # # del plots
+    # st.dataframe(df)
     return file_png
 
 
@@ -361,7 +376,7 @@ def do_mpl_chart():
             file_img = _chart(ticker)
             if file_img:
                 images[ticker] = file_img
-                st.image(file_img)
+                st.image(Image.open(file_img))
                 st.markdown(f"[{ticker}]({_finviz_chart_url(ticker)})", unsafe_allow_html=True)
 
         except:
@@ -371,12 +386,11 @@ def do_mpl_chart():
 def do_review(chart_root=CHART_ROOT):
     """ review existing charts
     """
-    files = [f for f in listdir(chart_root) if f.endswith(".png")]
-    tickers = sorted([i.replace(".png", "") for i in files])
+    tickers = sorted([f.stem for f in Path(chart_root).glob("*.png")])
     selected_tickers = st.multiselect("Select tickers", tickers, [])
     for ticker in selected_tickers:
-        file_png = join(chart_root, f"{ticker}.png")
-        st.image(file_png)
+        file_img = Path.joinpath(chart_root, f"{ticker}.png")
+        st.image(Image.open(file_img))
         st.markdown(f"[{ticker}]({_finviz_chart_url(ticker)})", unsafe_allow_html=True)
 
 def do_show_etf_data():

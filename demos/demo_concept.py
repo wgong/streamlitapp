@@ -320,6 +320,7 @@ def do_chart():
             columns=['sin(x)', 'cos(x)', '1.5sin(3x)'])
 
 
+
     st.subheader('st.line_chart')
     st.line_chart(df)    
 
@@ -665,6 +666,11 @@ def do_misc():
     _set_bg_img()
 
     st.header('Misc')
+
+    df = pd.DataFrame(np.random.randn(20, 3),
+        columns=['a', 'b', 'c'])    
+    st.dataframe(df)
+    st.dataframe(df.head(5))    
 
     st.subheader("set background image")
     with st.expander("Show code"):
