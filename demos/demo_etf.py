@@ -80,7 +80,7 @@ def _finviz_chart_url(ticker, period="d"):
 def _download_quote(symbol, num_days=NUM_DAYS_QUOTE):
     return yf.Ticker(symbol).history(f"{num_days}d")
 
-@st.cache(ttl=7200)
+@st.experimental_memo(ttl=7200)
 def _get_quotes(symbol, num_days=NUM_DAYS_QUOTE, cache=False):
     """
     check cache:
@@ -161,7 +161,7 @@ def _calculate_ta(df):
     df = _ta_RSI(df)
     return df    
 
-# @st.cache(ttl=7200)
+# @st.experimental_memo(ttl=7200)
 def _chart(ticker, chart_root=CHART_ROOT):
     try:
         df = _get_quotes(ticker)
@@ -223,7 +223,7 @@ def _chart(ticker, chart_root=CHART_ROOT):
     # custom style
     # https://stackoverflow.com/questions/68296296/customizing-mplfinance-plot-python
     
-    file_png = Path.joinpath(chart_root, f"{ticker}.png")
+    file_img = Path.joinpath(chart_root, f"{ticker}.png")
     mpf.plot(df, type='candle', 
             style='yahoo', 
             panel_ratios=(4,3,1),
@@ -233,18 +233,20 @@ def _chart(ticker, chart_root=CHART_ROOT):
             volume=True, volume_panel=2, 
             ylabel="", ylabel_lower='',
             datetime_format='%m-%d',
-            savefig=file_png,
+            savefig=file_img,
             figsize=(16,11),
             tight_layout=True,
             show_nontrading=True
         )
     # # del [df]   # remove df
     # # del plots
-    # st.dataframe(df)
-    return file_png
+    # st.dataframe(df)   # ["Close", "Low", "High", "Volume"]
+    today_quote = df.iloc[-1, :].to_dict()
+    prev_day_quote = df.iloc[-2, :].to_dict()
+    return {"ticker": ticker, "file_img": file_img, "today_quote": today_quote, "prev_day_quote": prev_day_quote}
 
 
-@st.cache
+@st.experimental_memo
 def _load_etf_df():
     # etf_df = pd.read_csv("./data/wl_futures_etf.csv")
     etf_data = [
@@ -367,14 +369,30 @@ def go_home():
     View [source code](https://github.com/wgong/streamlitapp/blob/main/demos/demo_etf.py)
     """)
     
+def _reformat_quote(ticker_dict):
+    ticker = ticker_dict["ticker"]
+    low_1 = f'{ticker_dict["prev_day_quote"]["Low"]:.2f}'
+    high_1 = f'{ticker_dict["prev_day_quote"]["High"]:.2f}'
+    close_1 = f'{ticker_dict["prev_day_quote"]["Close"]:.2f}'
+    low = f'{ticker_dict["today_quote"]["Low"]:.2f}'
+    high = f'{ticker_dict["today_quote"]["High"]:.2f}'
+    close = f'{ticker_dict["today_quote"]["Close"]:.2f}'
+    chg = f'{100*(1- ticker_dict["prev_day_quote"]["Close"] / ticker_dict["today_quote"]["Close"]):.2f} %'
+    return [ticker, low_1, high_1, close_1, low, high, close, chg]
+
 def do_mpl_chart():
     """ chart new ticker
     """
+    quote_cols = ["Ticker", "Low-1", "High-1", "Close-1", "Low", "High", "Close", "%Chg"]
+    quote_data = []
     images = {}
     tickers = st.text_input(f'Enter ticker(s) (max {MAX_NUM_TICKERS})', "SPY") 
     for ticker in _parse_tickers(tickers)[:MAX_NUM_TICKERS]:
         try:
-            file_img = _chart(ticker)
+            ticker_dict = _chart(ticker)
+            # st.write(ticker_dict)
+            quote_data.append(_reformat_quote(ticker_dict))
+            file_img = ticker_dict["file_img"]
             if file_img:
                 images[ticker] = file_img
                 st.image(Image.open(file_img))
@@ -382,7 +400,7 @@ def do_mpl_chart():
 
         except:
             st.error(f"invalid ticker: {ticker}\n{format_exc()}")
-
+    st.dataframe(pd.DataFrame(quote_data, columns=quote_cols))
 
 def do_review(chart_root=CHART_ROOT):
     """ review existing charts
