@@ -80,6 +80,7 @@ def _finviz_chart_url(ticker, period="d"):
 def _download_quote(symbol, num_days=NUM_DAYS_QUOTE):
     return yf.Ticker(symbol).history(f"{num_days}d")
 
+@st.cache(ttl=7200)
 def _get_quotes(symbol, num_days=NUM_DAYS_QUOTE, cache=False):
     """
     check cache:
@@ -160,7 +161,7 @@ def _calculate_ta(df):
     df = _ta_RSI(df)
     return df    
 
-# @st.cache(ttl=7200)
+@st.cache(ttl=7200)
 def _chart(ticker, chart_root=CHART_ROOT):
     try:
         df = _get_quotes(ticker)
@@ -179,14 +180,14 @@ def _chart(ticker, chart_root=CHART_ROOT):
     # macd_signal_plot = mpf.make_addplot(df["macd_signal"], panel=1, color='b')
 
     # candle overlay
-    light_black = '#404040'
+    light_black = '#8F8E83'
     # ema_fast_plot = mpf.make_addplot(df["ema_fast"], panel=0, color='c', linestyle="dashed")
-    ema_fast_u_plot = mpf.make_addplot(df["ema_fast_u"], panel=0, color=light_black, linestyle="dotted")
-    ema_fast_d_plot = mpf.make_addplot(df["ema_fast_d"], panel=0, color=light_black, linestyle="dotted")
+    ema_fast_u_plot = mpf.make_addplot(df["ema_fast_u"], panel=0, color=light_black, linestyle="solid")
+    ema_fast_d_plot = mpf.make_addplot(df["ema_fast_d"], panel=0, color=light_black, linestyle="solid")
     ema_slow_plot = mpf.make_addplot(df["ema_slow"], panel=0, color='red', linestyle="dashed")
     ema_slow_u_plot = mpf.make_addplot(df["ema_slow_u"], panel=0, color='b')
     ema_slow_d_plot = mpf.make_addplot(df["ema_slow_d"], panel=0, color='b')
-    ema_long_plot = mpf.make_addplot(df["ema_long"], panel=0, color='green')
+    ema_long_plot = mpf.make_addplot(df["ema_long"], panel=0, width=3, color='#ED8CEB')  # magenta
     
     # RSI
     # make sure ylim are the same
@@ -233,7 +234,7 @@ def _chart(ticker, chart_root=CHART_ROOT):
             ylabel="", ylabel_lower='',
             datetime_format='%m-%d',
             savefig=file_png,
-            figsize=(16,8),
+            figsize=(16,11),
             tight_layout=True,
             show_nontrading=True
         )
