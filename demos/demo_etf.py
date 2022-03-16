@@ -161,7 +161,7 @@ def _calculate_ta(df):
     df = _ta_RSI(df)
     return df    
 
-@st.cache(ttl=7200)
+# @st.cache(ttl=7200)
 def _chart(ticker, chart_root=CHART_ROOT):
     try:
         df = _get_quotes(ticker)
@@ -441,6 +441,13 @@ def do_sidebar():
 
             with col_period:
                 st.selectbox('Period:', list(PERIOD_DICT.keys()), index=0, key="period")
+
+
+        if menu_item == _STR_REVIEW_CHART:
+            btn_cleanup = st.button("Cleanup charts")
+            if btn_cleanup:
+                for f in Path(CHART_ROOT).glob("*.png"):
+                    f.unlink()
 
 # body
 def do_body():
