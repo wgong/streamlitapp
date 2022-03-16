@@ -435,15 +435,12 @@ def do_sidebar():
         menu_item = st.selectbox("Select", menu_options, index=default_ix, key="menu_item")
 
         if menu_item == _STR_ETF_CHART:
-            col_sector, col_period = st.columns([4,2])
-            with col_sector:
-                selected_sectors = st.multiselect("Sectors", etf_sectors, DEFAULT_SECTORS, key="selected_sectors")
-
-            with col_period:
-                st.selectbox('Period:', list(PERIOD_DICT.keys()), index=0, key="period")
+            st.selectbox('Period:', list(PERIOD_DICT.keys()), index=0, key="period")
+            selected_sectors = st.multiselect("Sectors", etf_sectors, DEFAULT_SECTORS, key="selected_sectors")
 
 
         if menu_item == _STR_REVIEW_CHART:
+            st.image("https://user-images.githubusercontent.com/329928/158516907-5ba1e280-c40b-47c8-9f8c-4f96f7b6b411.PNG")
             btn_cleanup = st.button("Cleanup charts")
             if btn_cleanup:
                 for f in Path(CHART_ROOT).glob("*.png"):
