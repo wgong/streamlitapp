@@ -50,6 +50,7 @@ FILE_CACHE_QUOTES = Path.joinpath(CHART_ROOT, "df_quotes_cache.pickle")
 
 DEFAULT_SECTORS = ['Equity Index']
 PERIOD_DICT = {"daily":"d", "weekly":"w", "monthly":"m"}
+QUOTE_COLS = ["Date", "Ticker", "%Chg", "Close", "Low", "High", "Close-1", "Low-1", "High-1"]
 
 ## i18n strings
 _STR_HOME = "home"
@@ -72,7 +73,7 @@ def _parse_tickers(s):
 
 def _title_xy(ticker):
     # position title manually
-    return {"title": f"{ticker}",  "x": 0.125, "y": 0.93}
+    return {"title": f"{ticker}",  "x": 0.85, "y": 0.95}
 
 def _finviz_chart_url(ticker, period="d"):
     return f"https://finviz.com/quote.ashx?t={ticker}&p={period}"
@@ -166,10 +167,15 @@ def _chart(ticker, chart_root=CHART_ROOT):
     try:
         df = _get_quotes(ticker)
     except:
-        return "", format_exc()
-    
-    df = _calculate_ta(df)
-    df = df.iloc[-NUM_DAYS_PLOT:, :]  # slice after done with calculating TA   
+        return {"ticker": ticker, "err_msg": format_exc()}
+
+    try:
+        df = _calculate_ta(df)
+    except:
+        return {"ticker": ticker, "err_msg": format_exc()}
+
+    # slice after done with calculating TA 
+    df = df.iloc[-NUM_DAYS_PLOT:, :]    
 
     # # macd panel
     # df = _ta_MACD(df)
@@ -234,7 +240,7 @@ def _chart(ticker, chart_root=CHART_ROOT):
             ylabel="", ylabel_lower='',
             datetime_format='%m-%d',
             savefig=file_img,
-            figsize=(16,11),
+            figsize=(st.session_state["FIGURE_WIDTH"],st.session_state["FIGURE_HEIGHT"]),
             tight_layout=True,
             show_nontrading=True
         )
@@ -243,7 +249,7 @@ def _chart(ticker, chart_root=CHART_ROOT):
     # st.dataframe(df)   # ["Close", "Low", "High", "Volume"]
     today_quote = df.iloc[-1, :].to_dict()
     prev_day_quote = df.iloc[-2, :].to_dict()
-    return {"ticker": ticker, "file_img": file_img, "today_quote": today_quote, "prev_day_quote": prev_day_quote}
+    return {"ticker": ticker, "file_img": file_img, "date": df.iloc[-1, :].name, "today_quote": today_quote, "prev_day_quote": prev_day_quote, "err_msg": None}
 
 
 @st.experimental_memo
@@ -363,13 +369,14 @@ def go_home():
     This app is built on 
     - [yahoo-finance](https://github.com/ranaroussi/yfinance) for datafeed
     - [pandas](https://github.com/pandas-dev/pandas) for data-processing & analysis
-    - [mplfinance](https://github.com/matplotlib/mplfinance) for charting
-    - [streamlit](https://github.com/streamlit) (an easy framework) for data application
+    - [mplfinance](https://github.com/matplotlib/mplfinance) for chart
+    - [streamlit](https://github.com/streamlit) (an easy framework) for application layout
     
     View [source code](https://github.com/wgong/streamlitapp/blob/main/demos/demo_etf.py)
-    """)
+    """, unsafe_allow_html=True)
     
 def _reformat_quote(ticker_dict):
+    date = pd.to_datetime(ticker_dict["date"]).date()  # convert timestamp to datetime
     ticker = ticker_dict["ticker"]
     low_1 = f'{ticker_dict["prev_day_quote"]["Low"]:.2f}'
     high_1 = f'{ticker_dict["prev_day_quote"]["High"]:.2f}'
@@ -378,29 +385,30 @@ def _reformat_quote(ticker_dict):
     high = f'{ticker_dict["today_quote"]["High"]:.2f}'
     close = f'{ticker_dict["today_quote"]["Close"]:.2f}'
     chg = f'{100*(1- ticker_dict["prev_day_quote"]["Close"] / ticker_dict["today_quote"]["Close"]):.2f} %'
-    return [ticker, low_1, high_1, close_1, low, high, close, chg]
+    # per QUOTE_COLS
+    return [date, ticker, chg, close, low, high, close_1, low_1, high_1]
 
 def do_mpl_chart():
     """ chart new ticker
     """
-    quote_cols = ["Ticker", "Low-1", "High-1", "Close-1", "Low", "High", "Close", "%Chg"]
     quote_data = []
     images = {}
     tickers = st.text_input(f'Enter ticker(s) (max {MAX_NUM_TICKERS})', "SPY") 
     for ticker in _parse_tickers(tickers)[:MAX_NUM_TICKERS]:
-        try:
-            ticker_dict = _chart(ticker)
-            # st.write(ticker_dict)
-            quote_data.append(_reformat_quote(ticker_dict))
-            file_img = ticker_dict["file_img"]
-            if file_img:
-                images[ticker] = file_img
-                st.image(Image.open(file_img))
-                st.markdown(f"[{ticker}]({_finviz_chart_url(ticker)})", unsafe_allow_html=True)
-
-        except:
-            st.error(f"invalid ticker: {ticker}\n{format_exc()}")
-    st.dataframe(pd.DataFrame(quote_data, columns=quote_cols))
+        ticker_dict = _chart(ticker)
+        err_msg = ticker_dict["err_msg"]
+        if err_msg:
+            st.error(f"Failed ticker: {ticker}\n{err_msg}")
+            continue
+        # st.write(ticker_dict)
+        quote_data.append(_reformat_quote(ticker_dict))
+        file_img = ticker_dict["file_img"]
+        if file_img:
+            images[ticker] = file_img
+            st.image(Image.open(file_img))
+            st.markdown(f"[{ticker}]({_finviz_chart_url(ticker)})", unsafe_allow_html=True)
+            
+    st.dataframe(pd.DataFrame(quote_data, columns=QUOTE_COLS), height=800)
 
 def do_review(chart_root=CHART_ROOT):
     """ review existing charts
@@ -459,10 +467,15 @@ def do_sidebar():
 
         if menu_item == _STR_REVIEW_CHART:
             st.image("https://user-images.githubusercontent.com/329928/158516907-5ba1e280-c40b-47c8-9f8c-4f96f7b6b411.PNG")
+            st.image("https://user-images.githubusercontent.com/329928/158516907-5ba1e280-c40b-47c8-9f8c-4f96f7b6b411.PNG")
             btn_cleanup = st.button("Cleanup charts")
             if btn_cleanup:
                 for f in Path(CHART_ROOT).glob("*.png"):
                     f.unlink()
+
+        if menu_item == _STR_CHART:
+            st.number_input("Figure width", value=16, key="FIGURE_WIDTH")
+            st.number_input("Figure height", value=10, key="FIGURE_HEIGHT")
 
 # body
 def do_body():
