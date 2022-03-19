@@ -34,7 +34,7 @@ st.set_page_config(
 MAX_NUM_TICKERS  = 20
 NUM_DAYS_QUOTE = 450
 NUM_DAYS_PLOT = 250
-RSI_PERIOD, RSI_AVG = 150, 30
+RSI_PERIOD, RSI_AVG = 100, 25
 RSI_BAND_WIDTH = 0.6
 
 MACD_FAST, MACD_SLOW, MACD_SIGNAL = 12, 26, 9
@@ -191,9 +191,9 @@ def _chart(ticker, chart_root=CHART_ROOT):
     ema_fast_u_plot = mpf.make_addplot(df["ema_fast_u"], panel=0, color=light_black, linestyle="solid")
     ema_fast_d_plot = mpf.make_addplot(df["ema_fast_d"], panel=0, color=light_black, linestyle="solid")
     ema_slow_plot = mpf.make_addplot(df["ema_slow"], panel=0, color='red', linestyle="dashed")
-    ema_slow_u_plot = mpf.make_addplot(df["ema_slow_u"], panel=0, color='b')
-    ema_slow_d_plot = mpf.make_addplot(df["ema_slow_d"], panel=0, color='b')
-    ema_long_plot = mpf.make_addplot(df["ema_long"], panel=0, width=3, color='#ED8CEB')  # magenta
+    # ema_slow_u_plot = mpf.make_addplot(df["ema_slow_u"], panel=0, color='b')
+    # ema_slow_d_plot = mpf.make_addplot(df["ema_slow_d"], panel=0, color='b')
+    ema_long_plot = mpf.make_addplot(df["ema_long"], panel=0, width=3, color='b')  # magenta '#ED8CEB'
     
     # RSI
     # make sure ylim are the same
@@ -219,7 +219,7 @@ def _chart(ticker, chart_root=CHART_ROOT):
     plots = [
         # panel-0
         ema_fast_u_plot, ema_fast_d_plot, 
-        ema_slow_plot, ema_slow_u_plot, ema_slow_d_plot, ema_long_plot 
+        ema_slow_plot, ema_long_plot # , ema_slow_u_plot, ema_slow_d_plot
         #,macd_plot, macd_signal_plot, macd_hist_plot, 
         # panel-1
         , rsi_50_plot,rsi_plot, rsi_avg_plot, rsi_u_plot, rsi_d_plot 
@@ -232,12 +232,14 @@ def _chart(ticker, chart_root=CHART_ROOT):
     file_img = Path.joinpath(chart_root, f"{ticker}.png")
     mpf.plot(df, type='candle', 
             style='yahoo', 
+            fill_between=dict(y1=df["ema_slow_d"].values,y2=df["ema_slow_u"].values,alpha=0.15,color='b'),
             panel_ratios=(4,3,1),
             # mav=(EMA_FAST), 
             addplot=plots, 
             title=_title_xy(ticker),
             volume=True, volume_panel=2, 
             ylabel="", ylabel_lower='',
+            xrotation=0,
             datetime_format='%m-%d',
             savefig=file_img,
             figsize=(st.session_state["FIGURE_WIDTH"],st.session_state["FIGURE_HEIGHT"]),
