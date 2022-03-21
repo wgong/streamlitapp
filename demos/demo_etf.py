@@ -31,11 +31,11 @@ st.set_page_config(
 )
 
 # settings 
-MAX_NUM_TICKERS  = 20
-NUM_DAYS_QUOTE = 450
+MAX_NUM_TICKERS  = 30
+NUM_DAYS_QUOTE = 390
 NUM_DAYS_PLOT = 250
 RSI_PERIOD, RSI_AVG = 100, 25
-RSI_BAND_WIDTH = 0.6
+RSI_BAND_WIDTH = 0.9
 
 MACD_FAST, MACD_SLOW, MACD_SIGNAL = 12, 26, 9
 EMA_FAST, EMA_SLOW, EMA_LONG = 15, 50, 150
@@ -134,8 +134,8 @@ def _ta_RSI(df, n=RSI_PERIOD, avg_period=RSI_AVG, band_width=RSI_BAND_WIDTH):
     for i,v in enumerate(losses[n:],n):
         l = losses[i] = ni*v + m*l
     rs = gains / losses
-    df["rsi_50"] = 50
-    df['rsi'] = 100 - (100/(1+rs))
+    # df["rsi_50"] = 50
+    df['rsi'] = 100 - (100/(1+rs)) - 50
     df["rsi_avg"] = df.rsi.ewm(span=avg_period).mean()
     df["rsi_u"] = df["rsi_avg"] + band_width
     df["rsi_d"] = df['rsi_avg'] - band_width
@@ -199,14 +199,14 @@ def _chart(ticker, chart_root=CHART_ROOT):
     # make sure ylim are the same
     rsi_min = df.min(axis=0)[["rsi"]].min()
     rsi_max = df.max(axis=0)[["rsi"]].max()
-    rsi_50_color = "#F0DC16"  # yellow
-    if rsi_min >= 50:
-        df["rsi_50"] = rsi_min
-        rsi_50_color = "g"
-    if rsi_max <= 50:
-        df["rsi_50"] = rsi_max
-        rsi_50_color = "r"
-    rsi_50_plot = mpf.make_addplot(df["rsi_50"], panel=1, color=rsi_50_color, width=3, linestyle="solid", ylim=(rsi_min,rsi_max))
+    # rsi_50_color = "#F0DC16"  # yellow
+    # if rsi_min >= 50:
+    #     df["rsi_50"] = rsi_min
+    #     rsi_50_color = "g"
+    # if rsi_max <= 50:
+    #     df["rsi_50"] = rsi_max
+    #     rsi_50_color = "r"
+    # rsi_50_plot = mpf.make_addplot(df["rsi_50"], panel=1, color=rsi_50_color, width=3, linestyle="solid", ylim=(rsi_min,rsi_max))
     rsi_plot = mpf.make_addplot(df["rsi"], panel=1, color='black', width=1, title="RSI", ylim=(rsi_min,rsi_max))
     rsi_avg_plot = mpf.make_addplot(df["rsi_avg"], panel=1, color='red', linestyle="dashed", ylim=(rsi_min,rsi_max))
     rsi_u_plot = mpf.make_addplot(df["rsi_u"], panel=1, color='b', ylim=(rsi_min,rsi_max))
@@ -222,7 +222,8 @@ def _chart(ticker, chart_root=CHART_ROOT):
         ema_slow_plot, ema_long_plot # , ema_slow_u_plot, ema_slow_d_plot
         #,macd_plot, macd_signal_plot, macd_hist_plot, 
         # panel-1
-        , rsi_50_plot,rsi_plot, rsi_avg_plot, rsi_u_plot, rsi_d_plot 
+        # , rsi_50_plot
+        ,rsi_plot, rsi_avg_plot, rsi_u_plot, rsi_d_plot 
         # panel-2
         ,vol_avg_plot                              
     ]
