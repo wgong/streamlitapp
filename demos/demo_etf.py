@@ -12,6 +12,7 @@ Streamlit ETF app
 
 import streamlit as st
 
+from datetime import datetime
 from PIL import Image
 from pathlib import Path
 import pickle
@@ -25,7 +26,7 @@ import mplfinance as mpf
 
 # Initial page config
 st.set_page_config(
-     page_title='Streamlit Chart Demo',
+     page_title=f'Mplfinance-Charts-{datetime.now().strftime("%Y-%m-%d_%H%M")}',
      layout="wide",
      initial_sidebar_state="expanded",
 )
@@ -42,6 +43,8 @@ EMA_FAST, EMA_SLOW, EMA_LONG = 15, 50, 150
 EMA_FAST_SCALE = 1.1  # EMA10 band half-width factor
 EMA_SLOW_SCALE = 2.0 
 MA_VOL = 20
+PANID_PRICE, PANID_VOL, PANID_RSI = 0, 1, 2
+
 
 CHART_ROOT = Path.home() / "charts"
 if not Path.exists(CHART_ROOT):
@@ -73,7 +76,7 @@ def _parse_tickers(s):
 
 def _title_xy(ticker):
     # position title manually
-    return {"title": f"{ticker}",  "x": 0.85, "y": 0.95}
+    return {"title": f"{ticker}",  "x": 0.75, "y": 0.95}
 
 def _finviz_chart_url(ticker, period="d"):
     return f"https://finviz.com/quote.ashx?t={ticker}&p={period}"
@@ -81,7 +84,7 @@ def _finviz_chart_url(ticker, period="d"):
 def _download_quote(symbol, num_days=NUM_DAYS_QUOTE):
     return yf.Ticker(symbol).history(f"{num_days}d")
 
-@st.experimental_memo(ttl=7200)
+@st.experimental_memo(ttl=3600)
 def _get_quotes(symbol, num_days=NUM_DAYS_QUOTE, cache=False):
     """
     check cache:
@@ -163,7 +166,7 @@ def _calculate_ta(df):
     return df    
 
 # @st.experimental_memo(ttl=7200)
-def _chart(ticker, chart_root=CHART_ROOT):
+def _chart(ticker, chart_root=CHART_ROOT, panid_price=PANID_PRICE, panid_vol=PANID_VOL, panid_rsi=PANID_RSI):
     try:
         df = _get_quotes(ticker)
     except:
@@ -181,19 +184,19 @@ def _chart(ticker, chart_root=CHART_ROOT):
     # df = _ta_MACD(df)
     # # df["macd"], df["macd_signal"], df["macd_hist"] = ta.MACD(df['Close'])
     # colors = ['g' if v >= 0 else 'r' for v in df["macd_hist"]]
-    # macd_plot = mpf.make_addplot(df["macd"], panel=1, color='fuchsia', title="MACD")
-    # macd_hist_plot = mpf.make_addplot(df["macd_hist"], type='bar', panel=1, color=colors) # color='dimgray'
-    # macd_signal_plot = mpf.make_addplot(df["macd_signal"], panel=1, color='b')
+    # macd_plot = mpf.make_addplot(df["macd"], panel=panid_rsi, color='fuchsia', title="MACD")
+    # macd_hist_plot = mpf.make_addplot(df["macd_hist"], type='bar', panel=panid_rsi, color=colors) # color='dimgray'
+    # macd_signal_plot = mpf.make_addplot(df["macd_signal"], panel=panid_rsi, color='b')
 
     # candle overlay
     light_black = '#8F8E83'
-    # ema_fast_plot = mpf.make_addplot(df["ema_fast"], panel=0, color='c', linestyle="dashed")
-    ema_fast_u_plot = mpf.make_addplot(df["ema_fast_u"], panel=0, color=light_black, linestyle="solid")
-    ema_fast_d_plot = mpf.make_addplot(df["ema_fast_d"], panel=0, color=light_black, linestyle="solid")
-    ema_slow_plot = mpf.make_addplot(df["ema_slow"], panel=0, color='red', linestyle="dashed")
-    # ema_slow_u_plot = mpf.make_addplot(df["ema_slow_u"], panel=0, color='b')
-    # ema_slow_d_plot = mpf.make_addplot(df["ema_slow_d"], panel=0, color='b')
-    ema_long_plot = mpf.make_addplot(df["ema_long"], panel=0, width=3, color='b')  # magenta '#ED8CEB'
+    # ema_fast_plot = mpf.make_addplot(df["ema_fast"], panel=panid_price, color='c', linestyle="dashed")
+    ema_fast_u_plot = mpf.make_addplot(df["ema_fast_u"], panel=panid_price, color=light_black, linestyle="solid")
+    ema_fast_d_plot = mpf.make_addplot(df["ema_fast_d"], panel=panid_price, color=light_black, linestyle="solid")
+    ema_slow_plot = mpf.make_addplot(df["ema_slow"], panel=panid_price, color='red', linestyle="solid")
+    # ema_slow_u_plot = mpf.make_addplot(df["ema_slow_u"], panel=panid_price, color='b')
+    # ema_slow_d_plot = mpf.make_addplot(df["ema_slow_d"], panel=panid_price, color='b')
+    ema_long_plot = mpf.make_addplot(df["ema_long"], panel=panid_price, width=3, color='b')  # magenta '#ED8CEB'
     
     # RSI
     # make sure ylim are the same
@@ -206,14 +209,14 @@ def _chart(ticker, chart_root=CHART_ROOT):
     # if rsi_max <= 50:
     #     df["rsi_50"] = rsi_max
     #     rsi_50_color = "r"
-    # rsi_50_plot = mpf.make_addplot(df["rsi_50"], panel=1, color=rsi_50_color, width=3, linestyle="solid", ylim=(rsi_min,rsi_max))
-    rsi_plot = mpf.make_addplot(df["rsi"], panel=1, color='black', width=1, title="RSI", ylim=(rsi_min,rsi_max))
-    rsi_avg_plot = mpf.make_addplot(df["rsi_avg"], panel=1, color='red', linestyle="dashed", ylim=(rsi_min,rsi_max))
-    rsi_u_plot = mpf.make_addplot(df["rsi_u"], panel=1, color='b', ylim=(rsi_min,rsi_max))
-    rsi_d_plot = mpf.make_addplot(df["rsi_d"], panel=1, color='b', ylim=(rsi_min,rsi_max))
+    # rsi_50_plot = mpf.make_addplot(df["rsi_50"], panel=panid_rsi, color=rsi_50_color, width=3, linestyle="solid", ylim=(rsi_min,rsi_max))
+    rsi_plot = mpf.make_addplot(df["rsi"], panel=panid_rsi, color='black', width=1,  ylim=(rsi_min,rsi_max))   # title="RSI",
+    rsi_avg_plot = mpf.make_addplot(df["rsi_avg"], panel=panid_rsi, color='red', linestyle="solid", ylim=(rsi_min,rsi_max))
+    rsi_u_plot = mpf.make_addplot(df["rsi_u"], panel=panid_rsi, color='b', linestyle="dashed", ylim=(rsi_min,rsi_max))
+    rsi_d_plot = mpf.make_addplot(df["rsi_d"], panel=panid_rsi, color='b', linestyle="dashed", ylim=(rsi_min,rsi_max))
     
     # volume
-    vol_avg_plot = mpf.make_addplot(df["vol_avg"], panel=2, color='k')
+    vol_avg_plot = mpf.make_addplot(df["vol_avg"], panel=panid_vol, color='k')
 
     # plot
     plots = [
@@ -234,11 +237,11 @@ def _chart(ticker, chart_root=CHART_ROOT):
     mpf.plot(df, type='candle', 
             style='yahoo', 
             fill_between=dict(y1=df["ema_slow_d"].values,y2=df["ema_slow_u"].values,alpha=0.15,color='b'),
-            panel_ratios=(4,3,1),
+            panel_ratios=(6,1,5),
             # mav=(EMA_FAST), 
             addplot=plots, 
             title=_title_xy(ticker),
-            volume=True, volume_panel=2, 
+            volume=True, volume_panel=PANID_VOL, 
             ylabel="", ylabel_lower='',
             xrotation=0,
             datetime_format='%m-%d',
