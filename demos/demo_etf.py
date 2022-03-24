@@ -36,7 +36,7 @@ MAX_NUM_TICKERS  = 30
 NUM_DAYS_QUOTE = 390
 NUM_DAYS_PLOT = 250
 RSI_PERIOD, RSI_AVG = 100, 25
-RSI_BAND_WIDTH = 0.9
+RSI_BAND_WIDTH = 0.6
 
 MACD_FAST, MACD_SLOW, MACD_SIGNAL = 12, 26, 9
 EMA_FAST, EMA_SLOW, EMA_LONG = 15, 50, 150
@@ -151,11 +151,13 @@ def _calculate_ta(df):
     df["ema_long"] = df.w_p.ewm(span=EMA_LONG).mean()
 
     # range
-    hl_mean_fast = (df.High - df.Low).ewm(span=int(EMA_FAST/2)).mean()
+    hl_mean_fast = (df.High - df.Low).ewm(span=EMA_FAST).mean()
+    # hl_mean_fast = (df.High - df.Low).ewm(span=int(EMA_FAST/2)).mean()
     df["ema_fast_u"] =  df.ema_fast + 0.5*hl_mean_fast * EMA_FAST_SCALE
     df["ema_fast_d"] =  df.ema_fast - 0.5*hl_mean_fast * EMA_FAST_SCALE
 
-    hl_mean_slow = (df.High - df.Low).ewm(span=int(EMA_SLOW/2)).mean()
+    hl_mean_slow = (df.High - df.Low).ewm(span=EMA_SLOW).mean()
+    # hl_mean_slow = (df.High - df.Low).ewm(span=int(EMA_SLOW/2)).mean()
     df["ema_slow_u"] =  df.ema_slow + 0.5*hl_mean_slow * EMA_SLOW_SCALE
     df["ema_slow_d"] =  df.ema_slow - 0.5*hl_mean_slow * EMA_SLOW_SCALE
 
@@ -193,10 +195,10 @@ def _chart(ticker, chart_root=CHART_ROOT, panid_price=PANID_PRICE, panid_vol=PAN
     # ema_fast_plot = mpf.make_addplot(df["ema_fast"], panel=panid_price, color='c', linestyle="dashed")
     ema_fast_u_plot = mpf.make_addplot(df["ema_fast_u"], panel=panid_price, color=light_black, linestyle="solid")
     ema_fast_d_plot = mpf.make_addplot(df["ema_fast_d"], panel=panid_price, color=light_black, linestyle="solid")
-    ema_slow_plot = mpf.make_addplot(df["ema_slow"], panel=panid_price, color='red', linestyle="solid")
+    ema_slow_plot = mpf.make_addplot(df["ema_slow"], panel=panid_price, color='b', linestyle="solid")
     # ema_slow_u_plot = mpf.make_addplot(df["ema_slow_u"], panel=panid_price, color='b')
     # ema_slow_d_plot = mpf.make_addplot(df["ema_slow_d"], panel=panid_price, color='b')
-    ema_long_plot = mpf.make_addplot(df["ema_long"], panel=panid_price, width=3, color='b')  # magenta '#ED8CEB'
+    ema_long_plot = mpf.make_addplot(df["ema_long"], panel=panid_price, width=2, color='k')  # magenta '#ED8CEB'
     
     # RSI
     # make sure ylim are the same
@@ -210,10 +212,10 @@ def _chart(ticker, chart_root=CHART_ROOT, panid_price=PANID_PRICE, panid_vol=PAN
     #     df["rsi_50"] = rsi_max
     #     rsi_50_color = "r"
     # rsi_50_plot = mpf.make_addplot(df["rsi_50"], panel=panid_rsi, color=rsi_50_color, width=3, linestyle="solid", ylim=(rsi_min,rsi_max))
-    rsi_plot = mpf.make_addplot(df["rsi"], panel=panid_rsi, color='black', width=1,  ylim=(rsi_min,rsi_max))   # title="RSI",
-    rsi_avg_plot = mpf.make_addplot(df["rsi_avg"], panel=panid_rsi, color='red', linestyle="solid", ylim=(rsi_min,rsi_max))
-    rsi_u_plot = mpf.make_addplot(df["rsi_u"], panel=panid_rsi, color='b', linestyle="dashed", ylim=(rsi_min,rsi_max))
-    rsi_d_plot = mpf.make_addplot(df["rsi_d"], panel=panid_rsi, color='b', linestyle="dashed", ylim=(rsi_min,rsi_max))
+    rsi_plot = mpf.make_addplot(df["rsi"], panel=panid_rsi, color='r', width=1,  ylim=(rsi_min,rsi_max))   # title="RSI",
+    rsi_avg_plot = mpf.make_addplot(df["rsi_avg"], panel=panid_rsi, color='b', linestyle="dashed", ylim=(rsi_min,rsi_max))
+    rsi_u_plot = mpf.make_addplot(df["rsi_u"], panel=panid_rsi, color='b', linestyle="solid", ylim=(rsi_min,rsi_max))
+    rsi_d_plot = mpf.make_addplot(df["rsi_d"], panel=panid_rsi, color='b', linestyle="solid", ylim=(rsi_min,rsi_max))
     
     # volume
     vol_avg_plot = mpf.make_addplot(df["vol_avg"], panel=panid_vol, color='k')
@@ -226,7 +228,7 @@ def _chart(ticker, chart_root=CHART_ROOT, panid_price=PANID_PRICE, panid_vol=PAN
         #,macd_plot, macd_signal_plot, macd_hist_plot, 
         # panel-1
         # , rsi_50_plot
-        ,rsi_plot, rsi_avg_plot, rsi_u_plot, rsi_d_plot 
+        , rsi_avg_plot, rsi_u_plot, rsi_d_plot,rsi_plot 
         # panel-2
         ,vol_avg_plot                              
     ]
@@ -236,12 +238,12 @@ def _chart(ticker, chart_root=CHART_ROOT, panid_price=PANID_PRICE, panid_vol=PAN
     file_img = Path.joinpath(chart_root, f"{ticker}.png")
     mpf.plot(df, type='candle', 
             style='yahoo', 
-            fill_between=dict(y1=df["ema_slow_d"].values,y2=df["ema_slow_u"].values,alpha=0.15,color='b'),
-            panel_ratios=(6,1,5),
+            fill_between=dict(y1=df["ema_fast_d"].values,y2=df["ema_fast_u"].values,alpha=0.15,color='b'),
+            panel_ratios=(6,1,6),
             # mav=(EMA_FAST), 
             addplot=plots, 
             title=_title_xy(ticker),
-            volume=True, volume_panel=PANID_VOL, 
+            volume=True, volume_panel=panid_vol, 
             ylabel="", ylabel_lower='',
             xrotation=0,
             datetime_format='%m-%d',
@@ -378,8 +380,8 @@ def go_home():
     - [mplfinance](https://github.com/matplotlib/mplfinance) for chart
     - [streamlit](https://github.com/streamlit) (an easy framework) for application layout
     
-    View [source code](https://github.com/wgong/streamlitapp/blob/main/demos/demo_etf.py)
     """, unsafe_allow_html=True)
+    # View [source code](https://github.com/wgong/streamlitapp/blob/main/demos/demo_etf.py)
     
 def _reformat_quote(ticker_dict):
     date = pd.to_datetime(ticker_dict["date"]).date()  # convert timestamp to datetime
