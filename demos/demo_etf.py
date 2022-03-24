@@ -26,7 +26,7 @@ import mplfinance as mpf
 
 # Initial page config
 st.set_page_config(
-     page_title=f'Mplfinance-Charts-{datetime.now().strftime("%Y-%m-%d_%H%M")}',
+     page_title=f'mplfinance-app-{datetime.now().strftime("%Y-%m-%d_%H%M")}',
      layout="wide",
      initial_sidebar_state="expanded",
 )
@@ -63,6 +63,7 @@ _STR_REVIEW_CHART = "review chart"
 _STR_ETF_DATA = "ETF data"
 _STR_APP_NAME = "Mplfinance App"
 
+BACKGROUND_IMG_URL = "https://user-images.githubusercontent.com/329928/155828764-b19a08e4-5346-4567-bba0-0ceeb5c2b241.png"
 
 ##############################################
 ## helper functions
@@ -370,18 +371,16 @@ etf_df, etf_sectors, etf_dict = _load_etf_df()
 ##############################################
 ## st handlers
 ##############################################
-
 def go_home():
     st.subheader("Welcome")
     st.markdown("""
-    This app is built on 
+    This [app](https://github.com/wgong/streamlitapp/blob/main/demos/demo_etf.py) is made with 
     - [yahoo-finance](https://github.com/ranaroussi/yfinance) for datafeed
     - [pandas](https://github.com/pandas-dev/pandas) for data-processing & analysis
     - [mplfinance](https://github.com/matplotlib/mplfinance) for chart
-    - [streamlit](https://github.com/streamlit) (an easy framework) for application layout
+    - [streamlit](https://github.com/streamlit) <sub>an easy framework</sub> for layout
     
     """, unsafe_allow_html=True)
-    # View [source code](https://github.com/wgong/streamlitapp/blob/main/demos/demo_etf.py)
     
 def _reformat_quote(ticker_dict):
     date = pd.to_datetime(ticker_dict["date"]).date()  # convert timestamp to datetime
@@ -484,6 +483,9 @@ def do_sidebar():
         if menu_item == _STR_CHART:
             st.number_input("Figure width", value=16, key="FIGURE_WIDTH")
             st.number_input("Figure height", value=10, key="FIGURE_HEIGHT")
+
+        # st.image(BACKGROUND_IMG_URL)
+        # st.image(BACKGROUND_IMG_URL)
 
 # body
 def do_body():
