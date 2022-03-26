@@ -26,25 +26,25 @@ import mplfinance as mpf
 
 # Initial page config
 st.set_page_config(
-     page_title=f'mplfinance-app-{datetime.now().strftime("%Y-%m-%d_%H%M")}',
+     page_title=f'mplfinance_app-{datetime.now().strftime("%Y-%m-%d_%H%M")}',
      layout="wide",
      initial_sidebar_state="expanded",
 )
 
 # settings 
-MAX_NUM_TICKERS  = 30
-NUM_DAYS_QUOTE = 390
-NUM_DAYS_PLOT = 250
-RSI_PERIOD, RSI_AVG = 100, 25
-RSI_BAND_WIDTH = 0.6
-
-MACD_FAST, MACD_SLOW, MACD_SIGNAL = 12, 26, 9
+MAX_NUM_TICKERS = 30
+NUM_DAYS_QUOTE, NUM_DAYS_PLOT = 390, 250
 EMA_FAST, EMA_SLOW, EMA_LONG = 15, 50, 150
-EMA_FAST_SCALE = 1.1  # EMA10 band half-width factor
-EMA_SLOW_SCALE = 2.0 
+EMA_FAST_SCALE, EMA_SLOW_SCALE = 1.4, 2.0 
 MA_VOL = 20
-PANID_PRICE, PANID_VOL, PANID_RSI = 0, 1, 2
+RSI_PERIOD, RSI_AVG, RSI_BAND_WIDTH = 100, 25, 0.6
+MACD_FAST, MACD_SLOW, MACD_SIGNAL = 12, 26, 9
 
+PANID_PRICE, PANID_VOL, PANID_RSI, PANID_SIGNAL = 0, 3, 2, 1
+PANEL_RATIOS = (8, 1, 8, 1)
+FIGURE_WIDTH, FIGURE_HEIGHT =  17, 13
+YELLOW = '#F5D928'
+LIGHT_BLACK = '#8F8E83'
 
 CHART_ROOT = Path.home() / "charts"
 if not Path.exists(CHART_ROOT):
@@ -70,22 +70,31 @@ BACKGROUND_IMG_URL = "https://user-images.githubusercontent.com/329928/155828764
 ##############################################
 def _parse_tickers(s):
     tmp = {}
-    s = s.replace(",", " ")
-    for t in s.split():
-        tmp[t.upper()] = 1
+    for t in [i.strip().upper() for i in s.replace(",", " ").split() if i.strip()]:
+        tmp[t] = 1
     return list(tmp.keys())
 
 def _title_xy(ticker):
     # position title manually
-    return {"title": f"{ticker}",  "x": 0.75, "y": 0.95}
+    return {"title": f"{ticker}",  "x": 0.55, "y": 0.945}
+
+def _color_rsi_avg(v):
+    if v > 0: return '#DCF7E5'
+    elif v < 0: return '#F6D5F7'
+    return YELLOW
+
+def _color_signal(v):
+    if v > 0: return 'g'
+    elif v < 0: return 'r'
+    return YELLOW
 
 def _finviz_chart_url(ticker, period="d"):
     return f"https://finviz.com/quote.ashx?t={ticker}&p={period}"
 
+@st.experimental_memo(ttl=600)
 def _download_quote(symbol, num_days=NUM_DAYS_QUOTE):
     return yf.Ticker(symbol).history(f"{num_days}d")
 
-@st.experimental_memo(ttl=3600)
 def _get_quotes(symbol, num_days=NUM_DAYS_QUOTE, cache=False):
     """
     check cache:
@@ -138,11 +147,11 @@ def _ta_RSI(df, n=RSI_PERIOD, avg_period=RSI_AVG, band_width=RSI_BAND_WIDTH):
     for i,v in enumerate(losses[n:],n):
         l = losses[i] = ni*v + m*l
     rs = gains / losses
-    # df["rsi_50"] = 50
-    df['rsi'] = 100 - (100/(1+rs)) - 50
+    df['rsi'] = 50 - (100/(1+rs))
     df["rsi_avg"] = df.rsi.ewm(span=avg_period).mean()
     df["rsi_u"] = df["rsi_avg"] + band_width
     df["rsi_d"] = df['rsi_avg'] - band_width
+    df["rsi_signal"] = df["rsi"] - df["rsi_avg"]
     return df
 
 def _calculate_ta(df):
@@ -153,23 +162,21 @@ def _calculate_ta(df):
 
     # range
     hl_mean_fast = (df.High - df.Low).ewm(span=EMA_FAST).mean()
-    # hl_mean_fast = (df.High - df.Low).ewm(span=int(EMA_FAST/2)).mean()
     df["ema_fast_u"] =  df.ema_fast + 0.5*hl_mean_fast * EMA_FAST_SCALE
     df["ema_fast_d"] =  df.ema_fast - 0.5*hl_mean_fast * EMA_FAST_SCALE
 
     hl_mean_slow = (df.High - df.Low).ewm(span=EMA_SLOW).mean()
-    # hl_mean_slow = (df.High - df.Low).ewm(span=int(EMA_SLOW/2)).mean()
     df["ema_slow_u"] =  df.ema_slow + 0.5*hl_mean_slow * EMA_SLOW_SCALE
     df["ema_slow_d"] =  df.ema_slow - 0.5*hl_mean_slow * EMA_SLOW_SCALE
 
     # trim volume to avoid exponential form
     df['Volume'] = df['Volume'] / 1000000
     df["vol_avg"] = df.Volume.ewm(span=MA_VOL).mean()
-    df = _ta_RSI(df)
-    return df    
+
+    return _ta_RSI(df)   
 
 # @st.experimental_memo(ttl=7200)
-def _chart(ticker, chart_root=CHART_ROOT, panid_price=PANID_PRICE, panid_vol=PANID_VOL, panid_rsi=PANID_RSI):
+def _chart(ticker, chart_root=CHART_ROOT, panid_price=PANID_PRICE, panid_vol=PANID_VOL, panid_rsi=PANID_RSI, panid_signal=PANID_SIGNAL):
     try:
         df = _get_quotes(ticker)
     except:
@@ -183,56 +190,31 @@ def _chart(ticker, chart_root=CHART_ROOT, panid_price=PANID_PRICE, panid_vol=PAN
     # slice after done with calculating TA 
     df = df.iloc[-NUM_DAYS_PLOT:, :]    
 
-    # # macd panel
-    # df = _ta_MACD(df)
-    # # df["macd"], df["macd_signal"], df["macd_hist"] = ta.MACD(df['Close'])
-    # colors = ['g' if v >= 0 else 'r' for v in df["macd_hist"]]
-    # macd_plot = mpf.make_addplot(df["macd"], panel=panid_rsi, color='fuchsia', title="MACD")
-    # macd_hist_plot = mpf.make_addplot(df["macd_hist"], type='bar', panel=panid_rsi, color=colors) # color='dimgray'
-    # macd_signal_plot = mpf.make_addplot(df["macd_signal"], panel=panid_rsi, color='b')
-
     # candle overlay
-    light_black = '#8F8E83'
-    # ema_fast_plot = mpf.make_addplot(df["ema_fast"], panel=panid_price, color='c', linestyle="dashed")
-    ema_fast_u_plot = mpf.make_addplot(df["ema_fast_u"], panel=panid_price, color=light_black, linestyle="solid")
-    ema_fast_d_plot = mpf.make_addplot(df["ema_fast_d"], panel=panid_price, color=light_black, linestyle="solid")
+    ema_fast_u_plot = mpf.make_addplot(df["ema_fast_u"], panel=panid_price, color=LIGHT_BLACK, linestyle="solid")
+    ema_fast_d_plot = mpf.make_addplot(df["ema_fast_d"], panel=panid_price, color=LIGHT_BLACK, linestyle="solid")
     ema_slow_plot = mpf.make_addplot(df["ema_slow"], panel=panid_price, color='b', linestyle="solid")
-    # ema_slow_u_plot = mpf.make_addplot(df["ema_slow_u"], panel=panid_price, color='b')
-    # ema_slow_d_plot = mpf.make_addplot(df["ema_slow_d"], panel=panid_price, color='b')
     ema_long_plot = mpf.make_addplot(df["ema_long"], panel=panid_price, width=2, color='k')  # magenta '#ED8CEB'
     
     # RSI
     # make sure ylim are the same
-    rsi_min = df.min(axis=0)[["rsi"]].min()
-    rsi_max = df.max(axis=0)[["rsi"]].max()
-    # rsi_50_color = "#F0DC16"  # yellow
-    # if rsi_min >= 50:
-    #     df["rsi_50"] = rsi_min
-    #     rsi_50_color = "g"
-    # if rsi_max <= 50:
-    #     df["rsi_50"] = rsi_max
-    #     rsi_50_color = "r"
-    # rsi_50_plot = mpf.make_addplot(df["rsi_50"], panel=panid_rsi, color=rsi_50_color, width=3, linestyle="solid", ylim=(rsi_min,rsi_max))
-    rsi_plot = mpf.make_addplot(df["rsi"], panel=panid_rsi, color='r', width=1,  ylim=(rsi_min,rsi_max))   # title="RSI",
+    rsi_min, rsi_max = np.nanmin(df['rsi']), np.nanmax(df['rsi'])
+    rsi_plot = mpf.make_addplot(df["rsi"], panel=panid_rsi, color='r', width=1,  ylim=(rsi_min,rsi_max))
     rsi_avg_plot = mpf.make_addplot(df["rsi_avg"], panel=panid_rsi, color='b', linestyle="dashed", ylim=(rsi_min,rsi_max))
     rsi_u_plot = mpf.make_addplot(df["rsi_u"], panel=panid_rsi, color='b', linestyle="solid", ylim=(rsi_min,rsi_max))
-    rsi_d_plot = mpf.make_addplot(df["rsi_d"], panel=panid_rsi, color='b', linestyle="solid", ylim=(rsi_min,rsi_max))
-    
+    rsi_d_plot = mpf.make_addplot(df["rsi_d"], panel=panid_rsi, color='b', linestyle="solid", ylim=(rsi_min,rsi_max))  # , ylabel=ticker)
+    signal_plot = mpf.make_addplot(df["rsi_signal"], panel=panid_signal, type="bar", 
+                            color=[_color_signal(v) for v in df["rsi_signal"]],ylim=(-1,1))                            
+
     # volume
     vol_avg_plot = mpf.make_addplot(df["vol_avg"], panel=panid_vol, color='k')
 
     # plot
-    plots = [
-        # panel-0
-        ema_fast_u_plot, ema_fast_d_plot, 
-        ema_slow_plot, ema_long_plot # , ema_slow_u_plot, ema_slow_d_plot
-        #,macd_plot, macd_signal_plot, macd_hist_plot, 
-        # panel-1
-        # , rsi_50_plot
-        , rsi_avg_plot, rsi_u_plot, rsi_d_plot,rsi_plot 
-        # panel-2
-        ,vol_avg_plot                              
-    ]
+    plots = [ema_fast_u_plot, ema_fast_d_plot, ema_slow_plot, ema_long_plot  
+            , rsi_avg_plot, rsi_u_plot, rsi_d_plot, rsi_plot 
+            , vol_avg_plot  
+            , signal_plot                             
+        ]
     # custom style
     # https://stackoverflow.com/questions/68296296/customizing-mplfinance-plot-python
     
@@ -240,12 +222,11 @@ def _chart(ticker, chart_root=CHART_ROOT, panid_price=PANID_PRICE, panid_vol=PAN
     mpf.plot(df, type='candle', 
             style='yahoo', 
             fill_between=dict(y1=df["ema_fast_d"].values,y2=df["ema_fast_u"].values,alpha=0.15,color='b'),
-            panel_ratios=(6,1,6),
-            # mav=(EMA_FAST), 
+            panel_ratios=PANEL_RATIOS,
             addplot=plots, 
             title=_title_xy(ticker),
             volume=True, volume_panel=panid_vol, 
-            ylabel="", ylabel_lower='',
+            ylabel="", ylabel_lower="",
             xrotation=0,
             datetime_format='%m-%d',
             savefig=file_img,
@@ -253,13 +234,10 @@ def _chart(ticker, chart_root=CHART_ROOT, panid_price=PANID_PRICE, panid_vol=PAN
             tight_layout=True,
             show_nontrading=True
         )
-    # # del [df]   # remove df
-    # # del plots
     # st.dataframe(df)   # ["Close", "Low", "High", "Volume"]
-    today_quote = df.iloc[-1, :].to_dict()
-    prev_day_quote = df.iloc[-2, :].to_dict()
-    return {"ticker": ticker, "file_img": file_img, "date": df.iloc[-1, :].name, "today_quote": today_quote, "prev_day_quote": prev_day_quote, "err_msg": None}
-
+    _date, _today_quote, _prev_day_quote = df.iloc[-1, :].name, df.iloc[-1, :].to_dict(), df.iloc[-2, :].to_dict()
+    del [df, plots]  
+    return {"ticker": ticker, "file_img": file_img, "date": _date, "today_quote": _today_quote, "prev_day_quote": _prev_day_quote, "err_msg": None}
 
 @st.experimental_memo
 def _load_etf_df():
@@ -430,7 +408,6 @@ def do_review(chart_root=CHART_ROOT):
 def do_show_etf_data():
     st.dataframe(etf_df)
 
-
 def do_show_etf_chart():
     """ ETF charts
     """
@@ -469,23 +446,21 @@ def do_sidebar():
 
         if menu_item == _STR_ETF_CHART:
             st.selectbox('Period:', list(PERIOD_DICT.keys()), index=0, key="period")
-            selected_sectors = st.multiselect("Sectors", etf_sectors, DEFAULT_SECTORS, key="selected_sectors")
+            st.multiselect("Sectors", etf_sectors, DEFAULT_SECTORS, key="selected_sectors")
 
 
         if menu_item == _STR_REVIEW_CHART:
-            st.image("https://user-images.githubusercontent.com/329928/158516907-5ba1e280-c40b-47c8-9f8c-4f96f7b6b411.PNG")
-            st.image("https://user-images.githubusercontent.com/329928/158516907-5ba1e280-c40b-47c8-9f8c-4f96f7b6b411.PNG")
+            st.image(BACKGROUND_IMG_URL)  # padding
+            st.image(BACKGROUND_IMG_URL)
             btn_cleanup = st.button("Cleanup charts")
             if btn_cleanup:
                 for f in Path(CHART_ROOT).glob("*.png"):
                     f.unlink()
 
         if menu_item == _STR_CHART:
-            st.number_input("Figure width", value=16, key="FIGURE_WIDTH")
-            st.number_input("Figure height", value=10, key="FIGURE_HEIGHT")
+            st.number_input("Figure width", value=FIGURE_WIDTH, key="FIGURE_WIDTH")
+            st.number_input("Figure height", value=FIGURE_HEIGHT, key="FIGURE_HEIGHT")
 
-        # st.image(BACKGROUND_IMG_URL)
-        # st.image(BACKGROUND_IMG_URL)
 
 # body
 def do_body():
