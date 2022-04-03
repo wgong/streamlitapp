@@ -406,6 +406,20 @@ def do_review(chart_root=CHART_ROOT):
 def do_show_etf_data():
     st.dataframe(etf_df)
 
+    st.markdown("""
+    ### watch
+    - SPY,SILJ,GDX,AXU,EXK,DBA,WEAT,KHC,TSN,UNG,FCG,XLE,XLB,URA,EWA,XME, tap, argt
+    ### index-sector
+    - SPY,QQQ,DIA,IWM,SDS,QID,DXD,XLE,XME,XLK,XLF,XLV,XLI,XLB,XLP,XLY,XLC,XLU,XLRE,UUP, FXE, FXY, BITO
+    ### commodity-agri-metal
+    - GSG,DBC,GLD,SLV,GDX,SILJ,COPX,URA,PALL,LIT,DBA,MOO,RJA,CORN,WEAT,COW,JO,WOOD,PHO
+    ### overseas
+    - SCHF,SCHC,GWX,EWG,EWQ,EWU,RSX,SCZ,EFA,FXI,MCHI,KWEB,ASHR,EWJ,EWY,EWT,INDA
+    - ENZL,EWA,EWC,EWW,EWZ,ARGT,IZRL,EIS,KSA,TUR,EZA
+    ### tech-energy
+    - VGT,CLOU,IGV,SMH,USO,BNO,DBO,UNG,BOIL,GRN,ICLN
+    """,unsafe_allow_html=True)
+
 def do_show_etf_chart():
     """ ETF charts
     """
