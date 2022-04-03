@@ -53,7 +53,7 @@ FILE_CACHE_QUOTES = Path.joinpath(CHART_ROOT, "df_quotes_cache.pickle")
 
 DEFAULT_SECTORS = ['Equity Index']
 PERIOD_DICT = {"daily":"d", "weekly":"w", "monthly":"m"}
-QUOTE_COLS = ["Date", "Ticker", "%Chg", "Close", "Low", "High", "Close-1", "Low-1", "High-1"]
+QUOTE_COLUMNS = ["Date", "Ticker", "%Chg", "Close", "Low", "High", "Close-1", "Low-1", "High-1"]
 
 ## i18n strings
 _STR_HOME = "home"
@@ -180,12 +180,14 @@ def _chart(ticker, chart_root=CHART_ROOT, panid_price=PANID_PRICE, panid_vol=PAN
     try:
         df = _get_quotes(ticker)
     except:
-        return {"ticker": ticker, "err_msg": format_exc()}
+        err_msg = format_exc()
+        return {"ticker": ticker, "err_msg": f"_get_quotes()\n{err_msg}"}
 
     try:
         df = _calculate_ta(df)
     except:
-        return {"ticker": ticker, "err_msg": format_exc()}
+        err_msg = format_exc()
+        return {"ticker": ticker, "err_msg": f"_calculate_ta()\n{err_msg}"}
 
     # slice after done with calculating TA 
     df = df.iloc[-NUM_DAYS_PLOT:, :]    
@@ -370,30 +372,26 @@ def _reformat_quote(ticker_dict):
     high = f'{ticker_dict["today_quote"]["High"]:.2f}'
     close = f'{ticker_dict["today_quote"]["Close"]:.2f}'
     chg = f'{100*(1- ticker_dict["prev_day_quote"]["Close"] / ticker_dict["today_quote"]["Close"]):.2f} %'
-    # per QUOTE_COLS
     return [date, ticker, chg, close, low, high, close_1, low_1, high_1]
 
 def do_mpl_chart():
     """ chart new ticker
     """
     quote_data = []
-    images = {}
     tickers = st.text_input(f'Enter ticker(s) (max {MAX_NUM_TICKERS})', "SPY") 
     for ticker in _parse_tickers(tickers)[:MAX_NUM_TICKERS]:
+        st.markdown(f"[{ticker}]({_finviz_chart_url(ticker)})", unsafe_allow_html=True)
         ticker_dict = _chart(ticker)
         err_msg = ticker_dict["err_msg"]
         if err_msg:
             st.error(f"Failed ticker: {ticker}\n{err_msg}")
             continue
-        # st.write(ticker_dict)
-        quote_data.append(_reformat_quote(ticker_dict))
         file_img = ticker_dict["file_img"]
         if file_img:
-            images[ticker] = file_img
+            quote_data.append(_reformat_quote(ticker_dict))
             st.image(Image.open(file_img))
-            st.markdown(f"[{ticker}]({_finviz_chart_url(ticker)})", unsafe_allow_html=True)
             
-    st.dataframe(pd.DataFrame(quote_data, columns=QUOTE_COLS), height=800)
+    st.dataframe(pd.DataFrame(quote_data, columns=QUOTE_COLUMNS), height=800)
 
 def do_review(chart_root=CHART_ROOT):
     """ review existing charts
