@@ -1,10 +1,10 @@
 """
 Streamlit ETF app
 # source: 
-    - https://github.com/wgong/streamlitapp/blob/main/demos/demo_etf.py
+    - https://github.com/wgong/streamlitapp/blob/main/demos/demo_mplfin.py
 # app:
     - http://etf.s8s.cloud/
-    - https://share.streamlit.io/wgong/streamlitapp/main/demos/demo_etf.py
+    - https://share.streamlit.io/wgong/streamlitapp/main/demos/demo_mplfin.py
 """
 import streamlit as st
 from datetime import datetime
@@ -373,7 +373,7 @@ def _chart(ticker, chart_root=CHART_ROOT, panid_price=PANID_PRICE, panid_vol=PAN
 def go_home():
     st.subheader("Welcome")
     st.markdown("""
-    This [app](https://github.com/wgong/streamlitapp/blob/main/demos/demo_etf.py) is made with 
+    This [app](https://github.com/wgong/streamlitapp/blob/main/demos/demo_mplfin.py) is made with 
     - [yahoo-finance](https://github.com/ranaroussi/yfinance) for datafeed
     - [pandas](https://github.com/pandas-dev/pandas) for data-processing & analysis
     - [mplfinance](https://github.com/matplotlib/mplfinance) for chart
