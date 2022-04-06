@@ -1,13 +1,10 @@
 """
 Streamlit ETF app
-
 # source: 
     - https://github.com/wgong/streamlitapp/blob/main/demos/demo_etf.py
-
 # app:
     - http://etf.s8s.cloud/
     - https://share.streamlit.io/wgong/streamlitapp/main/demos/demo_etf.py
-
 """
 import streamlit as st
 from datetime import datetime
@@ -173,7 +170,7 @@ FILE_CACHE_QUOTES = Path.joinpath(CHART_ROOT, "df_quotes_cache.pickle")
 
 DEFAULT_SECTORS = ['Equity Index']
 PERIOD_DICT = {"daily":"d", "weekly":"w", "monthly":"m"}
-QUOTE_COLUMNS = ["Date", "Ticker", "%Chg", "Close", "Low", "High", "Close-1", "Low-1", "High-1"]
+QUOTE_COLUMNS = ["Date", "Ticker", "Chg(%)", "Close", "Low", "High", "Close-1", "Low-1", "High-1"]
 
 ## i18n strings
 _STR_HOME = "home"
@@ -393,7 +390,8 @@ def _reformat_quote(ticker_dict):
     low = f'{ticker_dict["today_quote"]["Low"]:.2f}'
     high = f'{ticker_dict["today_quote"]["High"]:.2f}'
     close = f'{ticker_dict["today_quote"]["Close"]:.2f}'
-    chg = f'{100*(1- ticker_dict["prev_day_quote"]["Close"] / ticker_dict["today_quote"]["Close"]):.2f} %'
+    # chg = f'{100*(1- ticker_dict["prev_day_quote"]["Close"] / ticker_dict["today_quote"]["Close"]):.2f} %'
+    chg = 100*(1- ticker_dict["prev_day_quote"]["Close"] / ticker_dict["today_quote"]["Close"])
     return [date, ticker, chg, close, low, high, close_1, low_1, high_1]
 
 def do_mpl_chart():
