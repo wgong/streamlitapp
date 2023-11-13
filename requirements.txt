@@ -9,3 +9,21 @@ hydralit   # multi-page app
 mplfinance 
 yfinance
 vega_datasets
+
+# 5 useful streamlit components:
+# https://towardsdatascience.com/5-streamlit-components-to-build-better-applications-71e0195c82d4
+
+# https://github.com/gagan3012/streamlit-tags/
+streamlit-tags   # 1.2.8
+
+# https://github.com/PablocFonseca/streamlit-aggrid
+streamlit-aggrid
+
+# https://github.com/andfanilo/streamlit-echarts
+streamlit-echarts
+
+# https://github.com/okld/streamlit-pandas-profiling
+streamlit-pandas-profiling
+
+# https://github.com/tvst/st-annotated-text
+st-annotated-text

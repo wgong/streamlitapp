@@ -31,8 +31,9 @@ import duckdb
 from pathlib import Path 
 import shutil
 from io import StringIO 
+import re
 
-DEBUG_FLAG = False # True
+DEBUG_FLAG = True # False # 
 
 
 
@@ -129,12 +130,18 @@ def generate_output_sql(df, edited_rows, key_cols, table_name):
 def convert_df2csv(df, index=True):
     return df.to_csv(index=index).encode('utf-8')
 
+def normalize_str(s):
+	parts = re.split(r'[^a-zA-Z0-9]+', s.lower()) 
+	return "_".join(parts)
+
 # st.write(f"DuckDB version: {duckdb.__version__}")
 ####=========================================================
 DB_FILENAME = "wg_data_editor.duckdb"
 conn = duckdb.connect(DB_FILENAME)
 
 st.header(f"Streamlit Data Editor")
+
+
 
 def main():
 	df = None
@@ -150,7 +157,7 @@ def main():
 			csv_io = StringIO(txt_file.getvalue().decode("utf-8"))
 			df = pd.read_csv(csv_io)
 			INPUT_FILENAME = txt_file.name
-			TABLE_NAME = (Path(INPUT_FILENAME).stem).lower()
+			TABLE_NAME = normalize_str((Path(INPUT_FILENAME).stem).lower())
 			KEY_NAME_DATA_EDITOR = f"df_{TABLE_NAME}"
 
 			#  CREATE TABLE {TABLE_NAME} AS select * from read_csv_auto('{p}');

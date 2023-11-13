@@ -423,6 +423,9 @@ def do_media():
     st.video("https://www.youtube.com/watch?v=hFZFjoX2cGg")
     st.video("https://www.youtube.com/watch?v=DTvS9lvRxZ8")
 
+    st.subheader("八段锦")
+    st.video("data/八段锦完整口令版领练.mp4")
+
     st.header('Audio ')
     st.subheader("classical music from [http://www.lisztonian.com/](http://www.lisztonian.com/titles/index.php?s=title)")
     st.write("Bagatelle in A Minor - WoO 59 (Fur Elise or For Elise) - Ludwig Van Beethoven")
